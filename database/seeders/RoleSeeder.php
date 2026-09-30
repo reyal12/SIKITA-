@@ -14,28 +14,28 @@ class RoleSeeder extends Seeder
     {
         $timestamp = now();
 
-        DB::table('roles')->upsert([
+        DB::table('peran')->upsert([
             [
-                'slug' => 'admin',
-                'name' => 'Administrator',
-                'description' => 'Mengelola operasional klinik, akun, jadwal, dan transaksi.',
+                'kode' => 'administrator',
+                'nama' => 'Administrator',
+                'deskripsi' => 'Mengelola operasional klinik, akun, jadwal, dan transaksi.',
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ],
             [
-                'slug' => 'doctor',
-                'name' => 'Dokter',
-                'description' => 'Mengelola jadwal praktik, kunjungan, rekam medis, dan resep.',
+                'kode' => 'dokter',
+                'nama' => 'Dokter',
+                'deskripsi' => 'Mengelola jadwal praktik, kunjungan, rekam medis, dan resep.',
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ],
             [
-                'slug' => 'patient',
-                'name' => 'Pasien',
-                'description' => 'Mendaftar kunjungan dan mengakses informasi layanan miliknya.',
+                'kode' => 'pasien',
+                'nama' => 'Pasien',
+                'deskripsi' => 'Mendaftar kunjungan dan mengakses informasi layanan miliknya.',
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ],
-        ], ['slug'], ['name', 'description', 'updated_at']);
+        ], ['kode'], ['nama', 'deskripsi', 'updated_at']);
     }
 }
