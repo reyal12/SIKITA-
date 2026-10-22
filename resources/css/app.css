@@ -2,8 +2,119 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+
+:root {
+    /* Palet warna klinik SIKITA */
+    --warna-primer: #769382;
+    --warna-primer-hover: #5C7A69;
+    --warna-sekunder: #E8DFC8;
+    --warna-netral: #C0C3B9;
+    --warna-latar: #F3EFE3;
+    --warna-teks: #2E3A33;
+    --warna-teks-muted: #536459;
+    --warna-kartu: #FFFFFF;
+    --warna-bahaya: #B94A48;
+    --warna-bahaya-latar: #FDF2F2;
+    --warna-sukses: #2F6F4E;
+    --warna-sukses-latar: #EDF7F1;
+    --radius-kartu: 16px;
+    --radius-input: 12px;
+}
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-primer: var(--warna-primer);
+    --color-primer-hover: var(--warna-primer-hover);
+    --color-sekunder: var(--warna-sekunder);
+    --color-netral: var(--warna-netral);
+    --color-latar: var(--warna-latar);
+    --color-teks: var(--warna-teks);
+}
+
+body {
+    background-color: var(--warna-latar);
+    color: var(--warna-teks);
+    font-family: var(--font-sans);
+    margin: 0;
+    min-height: 100vh;
+}
+
+/* Utilitas input dan kartu form SIKITA */
+.sikita-card {
+    background-color: var(--warna-kartu);
+    border-radius: var(--radius-kartu);
+    box-shadow: 0 10px 25px -5px rgba(46, 58, 51, 0.07), 0 8px 10px -6px rgba(46, 58, 51, 0.05);
+    border: 1px solid rgba(192, 195, 185, 0.5);
+}
+
+.sikita-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-input);
+    border: 1.5px solid var(--warna-netral);
+    background-color: #FAFAF7;
+    color: var(--warna-teks);
+    font-size: 0.95rem;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+}
+
+.sikita-input:focus {
+    outline: none;
+    border-color: var(--warna-primer);
+    background-color: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(118, 147, 130, 0.25);
+}
+
+.sikita-input::placeholder {
+    color: #8C948D;
+}
+
+.sikita-btn-primer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.8rem 1.25rem;
+    border-radius: var(--radius-input);
+    background-color: var(--warna-primer);
+    color: #FFFFFF;
+    font-weight: 600;
+    font-size: 0.975rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(46, 58, 51, 0.1);
+}
+
+.sikita-btn-primer:hover {
+    background-color: var(--warna-primer-hover);
+}
+
+.sikita-btn-primer:active {
+    transform: scale(0.99);
+}
+
+.sikita-btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius-input);
+    border: 1.5px solid var(--warna-netral);
+    background-color: transparent;
+    color: var(--warna-teks);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.sikita-btn-outline:hover {
+    border-color: var(--warna-primer);
+    color: var(--warna-primer-hover);
+    background-color: rgba(118, 147, 130, 0.08);
 }
