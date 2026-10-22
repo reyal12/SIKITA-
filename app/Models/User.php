@@ -56,4 +56,23 @@ class User extends Authenticatable
 
         return $this->peran()->whereIn('kode', $kode)->exists();
     }
+
+    /**
+     * Dapatkan nama rute dashboard sesuai prioritas peran: admin > dokter > pasien.
+     */
+    public function dashboardRoute(): string
+    {
+        // Prioritas 1: Administrator memiliki hak akses tertinggi
+        if ($this->punyaPeran('admin')) {
+            return 'admin.dashboard';
+        }
+
+        // Prioritas 2: Dokter
+        if ($this->punyaPeran('dokter')) {
+            return 'dokter.dashboard';
+        }
+
+        // Prioritas 3: Pasien
+        return 'pasien.dashboard';
+    }
 }

@@ -12,7 +12,21 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Daftarkan alias middleware hak akses peran
+        $middleware->alias([
+            'peran' => \App\Http\Middleware\CheckPeran::class,
+        ]);
+
+        // Arahkan tamu yang belum login ke rute login
+        $middleware->redirectGuestsTo(fn () => route('login'));
+
+        // Arahkan pengguna yang sudah login ke dashboard sesuai peran jika membuka halaman login/registrasi
+        $middleware->redirectUsersTo(function () {
+            /** @var \App\Models\User|null $user */
+            $user = auth()->user();
+
+            return $user ? route($user->dashboardRoute()) : route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
