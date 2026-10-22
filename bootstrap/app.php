@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\CheckPeran;
+use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +14,21 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Daftarkan alias middleware hak akses peran
+        $middleware->alias([
+            'peran' => CheckPeran::class,
+        ]);
+
+        // Arahkan tamu yang belum login ke rute login
+        $middleware->redirectGuestsTo(fn () => route('login'));
+
+        // Arahkan pengguna yang sudah login ke dashboard sesuai peran jika membuka halaman login/registrasi
+        $middleware->redirectUsersTo(function () {
+            /** @var User|null $user */
+            $user = auth()->user();
+
+            return $user ? route($user->dashboardRoute()) : route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
