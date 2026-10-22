@@ -138,7 +138,7 @@ return new class extends Migration
             ],
         ]);
 
-        DB::table('peran')->where('kode', 'admin')->update(['kode' => 'administrator']);
+        DB::table('peran')->where('kode', 'administrator')->update(['kode' => 'admin']);
         DB::table('peran')->where('kode', 'doctor')->update(['kode' => 'dokter']);
         DB::table('peran')->where('kode', 'patient')->update(['kode' => 'pasien']);
 
