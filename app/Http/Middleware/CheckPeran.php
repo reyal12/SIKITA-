@@ -15,7 +15,7 @@ class CheckPeran
      * - ->middleware('peran:admin')
      * - ->middleware('peran:admin,dokter')
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, string ...$peran): Response
     {

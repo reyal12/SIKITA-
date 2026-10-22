@@ -3,12 +3,13 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 // Rute beranda diarahkan ke dashboard jika sudah login, atau ke halaman login jika belum
 Route::get('/', function () {
     if (auth()->check()) {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = auth()->user();
 
         return redirect()->route($user->dashboardRoute());
