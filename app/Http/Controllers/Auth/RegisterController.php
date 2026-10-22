@@ -7,7 +7,6 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\Peran;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
@@ -44,11 +43,7 @@ class RegisterController extends Controller
 
         $user->peran()->attach($peranPasien->id);
 
-        // Langsung autentikasi (login) dan regenerasi session
-        Auth::login($user);
-        $request->session()->regenerate();
-
-        // Arahkan langsung ke dashboard pasien
-        return redirect()->route('pasien.dashboard')->with('sukses', 'Pendaftaran akun pasien berhasil!');
+        // Arahkan kembali ke halaman login dengan pesan sukses
+        return redirect()->route('login')->with('sukses', 'Pendaftaran akun pasien berhasil! Silakan masuk dengan akun Anda.');
     }
 }

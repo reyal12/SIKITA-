@@ -33,7 +33,7 @@ class AuthTest extends TestCase
         $responseRegister->assertSee('Daftar Akun Pasien');
     }
 
-    public function test_registrasi_pasien_baru_berhasil_langsung_login_dan_masuk_ke_dashboard_pasien(): void
+    public function test_registrasi_pasien_baru_berhasil_dan_diarahkan_kembali_ke_halaman_login(): void
     {
         $payload = [
             'name' => 'Budi Santoso',
@@ -44,8 +44,12 @@ class AuthTest extends TestCase
 
         $response = $this->post('/register', $payload);
 
-        // Setelah daftar, langsung diarahkan ke dashboard pasien
-        $response->assertRedirect(route('pasien.dashboard'));
+        // Setelah daftar, dialihkan kembali ke halaman login dengan pesan sukses
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHas('sukses');
+
+        // Pengguna tetap sebagai tamu (belum otomatis login)
+        $this->assertGuest();
 
         // Akun terdaftar di tabel users
         $this->assertDatabaseHas('users', [
@@ -55,9 +59,6 @@ class AuthTest extends TestCase
 
         $user = User::where('email', 'budi@example.com')->first();
         $this->assertNotNull($user);
-
-        // Pengguna langsung terautentikasi
-        $this->assertAuthenticatedAs($user);
 
         // Peran pasien otomatis ditugaskan
         $this->assertTrue($user->punyaPeran('pasien'));
