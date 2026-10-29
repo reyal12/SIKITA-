@@ -1,70 +1,75 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard Dokter &bull; SIKITA</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body style="background-color: var(--warna-latar); color: var(--warna-teks); font-family: var(--font-sans); min-height: 100vh; padding: 2.5rem 1rem;">
-    <div style="max-width: 680px; margin: 0 auto;">
-        <!-- Header Placeholder Dashboard -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background-color: var(--warna-primer); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;">
-                    S
-                </div>
+<body>
+    <main class="dashboard-shell">
+        <header class="dashboard-header">
+            <div class="dashboard-brand">
+                <div class="dashboard-brand-mark">S</div>
                 <div>
-                    <h1 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--warna-teks);">SIKITA</h1>
-                    <p style="font-size: 0.8rem; color: var(--warna-teks-muted); margin: 0;">Panel Dokter Praktik</p>
+                    <h1>SIKITA</h1>
+                    <p>Panel Dokter Praktik</p>
                 </div>
             </div>
-
-            <!-- Tombol Logout POST + CSRF -->
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="sikita-btn-outline" style="font-size: 0.85rem;">
-                    Keluar (Logout)
-                </button>
-            </form>
-        </div>
-
-        <!-- Kartu Informasi Pengguna Placeholder -->
-        <div class="sikita-card" style="padding: 2rem 2.25rem;">
-            <div style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; background-color: var(--warna-sekunder); color: var(--warna-teks); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">
-                Placeholder Dashboard Dokter
+            <div class="dashboard-header-actions">
+                <span class="muted">dr. {{ $user->name }}</span>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="sikita-btn-outline" type="submit">Keluar</button>
+                </form>
             </div>
+        </header>
 
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--warna-teks);">
-                Selamat Datang, dr. {{ $user->name }}!
-            </h2>
-            <p style="font-size: 0.95rem; color: var(--warna-teks-muted); margin: 0 0 1.5rem 0;">
-                Anda berhasil masuk ke sistem SIKITA dengan hak akses Dokter.
-            </p>
+        @if (session('sukses'))
+            <div class="dashboard-alert" role="status">{{ session('sukses') }}</div>
+        @endif
 
-            <div style="background-color: var(--warna-latar); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--warna-netral); margin-bottom: 1.5rem;">
-                <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; row-gap: 0.75rem; font-size: 0.9rem;">
-                    <dt style="font-weight: 600; color: var(--warna-teks-muted);">Nama Lengkap:</dt>
-                    <dd style="margin: 0; font-weight: 600; color: var(--warna-teks);">{{ $user->name }}</dd>
-
-                    <dt style="font-weight: 600; color: var(--warna-teks-muted);">Email:</dt>
-                    <dd style="margin: 0; color: var(--warna-teks);">{{ $user->email }}</dd>
-
-                    <dt style="font-weight: 600; color: var(--warna-teks-muted);">Peran Aktif:</dt>
-                    <dd style="margin: 0;">
-                        @foreach ($user->peran as $p)
-                            <span style="display: inline-block; padding: 0.15rem 0.55rem; background-color: var(--warna-primer); color: #ffffff; border-radius: 6px; font-size: 0.78rem; font-weight: 600; margin-right: 0.35rem;">
-                                {{ $p->nama }} ({{ $p->kode }})
-                            </span>
-                        @endforeach
-                    </dd>
-                </dl>
+        <section class="sikita-card dashboard-card">
+            <div class="section-heading">
+                <div>
+                    <h2>Pendaftaran pasien</h2>
+                    <p class="muted">Janji temu untuk dokter yang sedang masuk.</p>
+                </div>
+                <span class="dashboard-badge">{{ $appointments->count() }} kunjungan</span>
             </div>
-
-            <p style="font-size: 0.85rem; color: var(--warna-teks-muted); margin: 0; font-style: italic;">
-                Catatan: Ini adalah tampilan minimal placeholder. Layout dashboard master sesungguhnya akan dikembangkan oleh anggota tim lain.
-            </p>
-        </div>
-    </div>
+            @if ($doctor === null)
+                <p class="dashboard-empty">Akun ini belum terhubung dengan data dokter. Hubungi administrator klinik.</p>
+            @elseif ($appointments->isEmpty())
+                <p class="dashboard-empty">Belum ada janji temu pasien.</p>
+            @else
+                <div class="dashboard-table-wrap">
+                    <table class="dashboard-table">
+                        <thead>
+                            <tr><th>Tanggal &amp; waktu</th><th>Antrean</th><th>Pasien</th><th>Keluhan</th><th>Status</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($appointments as $appointment)
+                                <tr>
+                                    <td>{{ \Illuminate\Support\Carbon::parse($appointment->tanggal_janji)->format('d M Y') }}<br>{{ substr($appointment->waktu_mulai, 0, 5) }}</td>
+                                    <td>{{ $appointment->nomor_janji }}<br><span class="muted">No. {{ $appointment->nomor_antrean }}</span></td>
+                                    <td>{{ $appointment->nama_pasien }}<br><span class="muted">{{ $appointment->nomor_pasien }}</span></td>
+                                    <td>{{ $appointment->keluhan_utama ?: '—' }}</td>
+                                    <td><span class="dashboard-badge dashboard-badge--{{ $appointment->status }}">{{ ['terjadwal' => 'Terjadwal', 'selesai' => 'Selesai', 'dibatalkan' => 'Dibatalkan'][$appointment->status] ?? $appointment->status }}</span></td>
+                                    <td>
+                                        @if ($appointment->status === 'terjadwal')
+                                            <form method="POST" action="{{ route('dokter.janji-temu.complete', $appointment->id) }}">
+                                                @csrf
+                                                <button class="sikita-btn-outline" type="submit">Tandai selesai</button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </section>
+    </main>
 </body>
 </html>

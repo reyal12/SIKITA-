@@ -1,70 +1,149 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard Pasien &bull; SIKITA</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body style="background-color: var(--warna-latar); color: var(--warna-teks); font-family: var(--font-sans); min-height: 100vh; padding: 2.5rem 1rem;">
-    <div style="max-width: 680px; margin: 0 auto;">
-        <!-- Header Placeholder Dashboard -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background-color: var(--warna-primer); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;">
-                    S
-                </div>
+@extends('dashboard.pasien.layout')
+
+@section('content')
+    <section class="patient-welcome-banner">
+        <div>
+            <span class="patient-welcome-kicker">{{ today()->format('d.m.Y') }} &bull; SIKITA Care</span>
+            <h2>Selamat Datang, {{ $patient->nama_lengkap ?? $user->name }}!</h2>
+            <p>Semoga hari Anda sehat. Pantau jadwal dan informasi kesehatan Anda di sini.</p>
+        </div>
+        <div class="patient-welcome-symbol" aria-hidden="true">
+            <svg viewBox="0 0 120 120"><path d="M60 12v96M12 60h96"/><circle cx="60" cy="60" r="43"/></svg>
+        </div>
+    </section>
+
+    <section class="patient-overview-grid patient-overview-grid--dashboard" aria-label="Ringkasan dashboard">
+        <article class="sikita-card patient-overview-card">
+            <div class="patient-card-heading">
                 <div>
-                    <h1 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--warna-teks);">SIKITA</h1>
-                    <p style="font-size: 0.8rem; color: var(--warna-teks-muted); margin: 0;">Portal Pasien Terpadu</p>
+                    <span class="patient-card-eyebrow">Agenda Anda</span>
+                    <h2>Janji Temu Aktif</h2>
                 </div>
+                @if ($activeAppointment)
+                    <span class="dashboard-badge dashboard-badge--terjadwal">Terjadwal</span>
+                @endif
             </div>
+            @if ($activeAppointment)
+                <div class="patient-appointment-doctor">
+                    <span class="patient-doctor-avatar" aria-hidden="true">
+                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($activeAppointment->nama_dokter, 0, 1)) }}
+                    </span>
+                    <div>
+                        <strong>{{ $activeAppointment->nama_dokter }}</strong>
+                        <span>{{ $activeAppointment->nama_spesialis }}</span>
+                    </div>
+                </div>
+                <div class="patient-appointment-meta">
+                    <div>
+                        <span class="patient-meta-label">Jadwal</span>
+                        <strong>{{ \Illuminate\Support\Carbon::parse($activeAppointment->tanggal_janji)->format('d M Y') }}</strong>
+                    </div>
+                    <div>
+                        <span class="patient-meta-label">Waktu praktik</span>
+                        <strong>{{ substr($activeAppointment->waktu_mulai, 0, 5) }} WIB</strong>
+                    </div>
+                    <div>
+                        <span class="patient-meta-label">Nomor antrean</span>
+                        <strong>#{{ $activeAppointment->nomor_antrean }}</strong>
+                    </div>
+                </div>
+                <div class="patient-card-actions">
+                    <form method="POST" action="{{ route('pasien.janji-temu.cancel', $activeAppointment->id) }}" onsubmit="return confirm('Batalkan janji temu ini?')">
+                        @csrf
+                        <button class="patient-button patient-button--light" type="submit">Batalkan</button>
+                    </form>
+                    <a class="patient-button patient-button--primary" href="{{ route('pasien.janji-temu') }}">Lihat Detail</a>
+                </div>
+            @else
+                <div class="patient-empty-appointment">
+                    <p>Belum ada janji temu aktif. Buat janji dengan dokter untuk memulai.</p>
+                    <a class="patient-button patient-button--primary" href="{{ route('pasien.janji-temu') }}">Buat Janji Temu</a>
+                </div>
+            @endif
+        </article>
 
-            <!-- Tombol Logout POST + CSRF -->
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="sikita-btn-outline" style="font-size: 0.85rem;">
-                    Keluar (Logout)
-                </button>
-            </form>
+        <article class="sikita-card patient-overview-card patient-billing-card">
+            <div class="patient-card-heading">
+                <div>
+                    <span class="patient-card-eyebrow">Informasi tagihan</span>
+                    <h2>Pembayaran &amp; Tagihan</h2>
+                </div>
+                <span class="patient-billing-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+                </span>
+            </div>
+            @if ($unpaidPayment)
+                <span class="patient-meta-label">Tagihan belum dibayar</span>
+                <strong class="patient-billing-amount">Rp{{ number_format((float) $unpaidPayment->jumlah, 0, ',', '.') }}</strong>
+                <div class="patient-billing-details">
+                    <span>{{ $unpaidPayment->nomor_pembayaran }}</span>
+                    <span class="dashboard-badge dashboard-badge--menunggu">Menunggu Pembayaran</span>
+                </div>
+                <p class="patient-billing-note">Silakan lakukan pembayaran melalui metode yang tertera atau hubungi admin klinik. Status diperbarui setelah pembayaran diterima.</p>
+                <a class="patient-button patient-button--primary patient-button--wide" href="{{ route('pasien.pembayaran') }}">Bayar Sekarang</a>
+            @elseif ($latestPayment)
+                <span class="patient-meta-label">Status tagihan terakhir</span>
+                <strong class="patient-billing-amount">Rp{{ number_format((float) $latestPayment->jumlah, 0, ',', '.') }}</strong>
+                <div class="patient-billing-details">
+                    <span>{{ $latestPayment->nomor_pembayaran }}</span>
+                    <span class="dashboard-badge dashboard-badge--{{ $latestPayment->status }}">{{ ['dibayar' => 'Lunas', 'gagal' => 'Gagal', 'dikembalikan' => 'Dikembalikan'][$latestPayment->status] ?? $latestPayment->status }}</span>
+                </div>
+                <p class="patient-billing-note">Tidak ada tagihan yang menunggu pembayaran.</p>
+                <a class="patient-button patient-button--light patient-button--wide" href="{{ route('pasien.pembayaran') }}">Lihat Riwayat Pembayaran</a>
+            @else
+                <div class="patient-billing-empty">
+                    <strong>Belum ada tagihan</strong>
+                    <p>Informasi biaya layanan akan muncul setelah kunjungan Anda dicatat.</p>
+                </div>
+                <a class="patient-button patient-button--light patient-button--wide" href="{{ route('pasien.pembayaran') }}">Lihat Pembayaran</a>
+            @endif
+        </article>
+    </section>
+
+    <section class="sikita-card patient-section-card patient-journey-card">
+        <div class="patient-section-heading">
+            <div>
+                <span class="patient-card-eyebrow">Perjalanan kesehatan</span>
+                <h2>Riwayat Kunjungan &amp; Medis Terakhir</h2>
+            </div>
+            <a class="patient-text-link" href="{{ route('pasien.riwayat-medis') }}">Lihat Riwayat</a>
         </div>
-
-        <!-- Kartu Informasi Pengguna Placeholder -->
-        <div class="sikita-card" style="padding: 2rem 2.25rem;">
-            <div style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; background-color: var(--warna-sekunder); color: var(--warna-teks); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">
-                Placeholder Dashboard Pasien
-            </div>
-
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--warna-teks);">
-                Halo, {{ $user->name }}!
-            </h2>
-            <p style="font-size: 0.95rem; color: var(--warna-teks-muted); margin: 0 0 1.5rem 0;">
-                Anda berhasil masuk ke sistem SIKITA dengan akun Pasien.
-            </p>
-
-            <div style="background-color: var(--warna-latar); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--warna-netral); margin-bottom: 1.5rem;">
-                <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; row-gap: 0.75rem; font-size: 0.9rem;">
-                    <dt style="font-weight: 600; color: var(--warna-teks-muted);">Nama Lengkap:</dt>
-                    <dd style="margin: 0; font-weight: 600; color: var(--warna-teks);">{{ $user->name }}</dd>
-
-                    <dt style="font-weight: 600; color: var(--warna-teks-muted);">Email:</dt>
-                    <dd style="margin: 0; color: var(--warna-teks);">{{ $user->email }}</dd>
-
-                    <dt style="font-weight: 600; color: var(--warna-teks-muted);">Peran Aktif:</dt>
-                    <dd style="margin: 0;">
-                        @foreach ($user->peran as $p)
-                            <span style="display: inline-block; padding: 0.15rem 0.55rem; background-color: var(--warna-primer); color: #ffffff; border-radius: 6px; font-size: 0.78rem; font-weight: 600; margin-right: 0.35rem;">
-                                {{ $p->nama }} ({{ $p->kode }})
-                            </span>
+        @if ($journeyAppointments->isEmpty())
+            <p class="dashboard-empty">Riwayat kunjungan Anda akan tampil di sini.</p>
+        @else
+            <div class="dashboard-table-wrap">
+                <table class="dashboard-table patient-history-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Dokter</th>
+                            <th>Hasil Pemeriksaan</th>
+                            <th>Resep</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($journeyAppointments as $appointment)
+                            @php($record = $medicalRecordsByAppointment->get($appointment->id))
+                            @php($prescriptionItems = $record ? $prescriptionsByMedicalRecord->get($record->id, collect()) : collect())
+                            <tr>
+                                <td>{{ \Illuminate\Support\Carbon::parse($appointment->tanggal_janji)->format('d M Y') }}<br><span class="muted">{{ substr($appointment->waktu_mulai, 0, 5) }}</span></td>
+                                <td><strong>{{ $appointment->nama_dokter }}</strong><br><span class="muted">{{ $appointment->nama_spesialis }}</span></td>
+                                <td>{{ $record?->diagnosis ?? 'Belum tersedia' }}</td>
+                                <td>
+                                    @if ($prescriptionItems->isNotEmpty())
+                                        <strong>{{ $prescriptionItems->pluck('nomor_resep')->unique()->join(', ') }}</strong><br>
+                                        {{ $prescriptionItems->pluck('nama_obat')->unique()->join(', ') }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td><span class="dashboard-badge dashboard-badge--{{ $appointment->status }}">{{ ['terjadwal' => 'Terjadwal', 'selesai' => 'Selesai', 'dibatalkan' => 'Dibatalkan'][$appointment->status] ?? $appointment->status }}</span></td>
+                            </tr>
                         @endforeach
-                    </dd>
-                </dl>
+                    </tbody>
+                </table>
             </div>
-
-            <p style="font-size: 0.85rem; color: var(--warna-teks-muted); margin: 0; font-style: italic;">
-                Catatan: Ini adalah tampilan minimal placeholder. Layout dashboard master sesungguhnya akan dikembangkan oleh anggota tim lain.
-            </p>
-        </div>
-    </div>
-</body>
-</html>
+        @endif
+    </section>
+@endsection
