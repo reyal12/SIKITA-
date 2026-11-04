@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Peran;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,20 @@ class LoginController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
+
+        // Jika pengguna belum memiliki peran sama sekali, tetapkan peran 'pasien' sebagai default
+        if ($user->peran()->count() === 0) {
+            $peranPasien = Peran::firstOrCreate(
+                ['kode' => 'pasien'],
+                [
+                    'nama' => 'Pasien',
+                    'deskripsi' => 'Mendaftar kunjungan dan mengakses informasi layanan miliknya.',
+                ]
+            );
+
+            $user->peran()->syncWithoutDetaching([$peranPasien->id]);
+            $user->unsetRelation('peran');
+        }
 
         // Redirect pengguna ke dashboard sesuai peran dengan prioritas: admin > dokter > pasien
         return redirect()->intended(route($user->dashboardRoute()));
