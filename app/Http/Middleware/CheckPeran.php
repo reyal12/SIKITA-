@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Peran;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,6 +31,20 @@ class CheckPeran
                     $daftarPeran[] = $trimmed;
                 }
             }
+        }
+
+        // Jika pengguna login belum memiliki peran sama sekali, tetapkan peran pasien sebagai fallback aman
+        if ($user && $user->peran()->count() === 0) {
+            $peranPasien = Peran::firstOrCreate(
+                ['kode' => 'pasien'],
+                [
+                    'nama' => 'Pasien',
+                    'deskripsi' => 'Mendaftar kunjungan dan mengakses informasi layanan miliknya.',
+                ]
+            );
+
+            $user->peran()->syncWithoutDetaching([$peranPasien->id]);
+            $user->unsetRelation('peran');
         }
 
         // Periksa apakah pengguna sedang login dan memiliki salah satu peran yang diizinkan

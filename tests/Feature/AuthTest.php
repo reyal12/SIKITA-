@@ -186,4 +186,62 @@ class AuthTest extends TestCase
         $responseKeenam->assertSessionHasErrors('email');
         $this->assertStringContainsString('Terlalu banyak percobaan login', session('errors')->first('email'));
     }
+
+    public function test_pasien_yang_mendaftar_dapat_langsung_login_dan_mengakses_dashboard_pasien_tanpa_error_403(): void
+    {
+        $payload = [
+            'name' => 'Siti Nurhaliza',
+            'email' => 'siti@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ];
+
+        // 1. Pasien mendaftar
+        $registerResponse = $this->post('/register', $payload);
+        $registerResponse->assertRedirect(route('login'));
+
+        // 2. Pasien login dengan kredensial yang baru didaftarkan
+        $loginResponse = $this->post('/login', [
+            'email' => 'siti@example.com',
+            'password' => 'password123',
+        ]);
+
+        $loginResponse->assertRedirect(route('pasien.dashboard'));
+        $this->assertAuthenticated();
+
+        // 3. Pasien dapat membuka dashboard pasien tanpa error 403 Akses Ditolak
+        $dashboardResponse = $this->get('/pasien/dashboard');
+        $dashboardResponse->assertStatus(200);
+        $dashboardResponse->assertSee('Selamat Datang, Siti Nurhaliza!');
+        $dashboardResponse->assertDontSee('Akses Ditolak');
+    }
+
+    public function test_pengguna_tanpa_peran_otomatis_diberikan_peran_pasien_saat_login_atau_buka_dashboard(): void
+    {
+        $userTanpaPeran = User::create([
+            'name' => 'Akun Yatim',
+            'email' => 'yatim@example.com',
+            'password' => Hash::make('password123'),
+        ]);
+
+        // Verifikasi awal: akun belum memiliki peran apa pun
+        $this->assertSame(0, $userTanpaPeran->peran()->count());
+
+        // Login dengan akun tersebut
+        $loginResponse = $this->post('/login', [
+            'email' => 'yatim@example.com',
+            'password' => 'password123',
+        ]);
+
+        $loginResponse->assertRedirect(route('pasien.dashboard'));
+        $this->assertAuthenticated();
+
+        // Peran pasien otomatis ditugaskan
+        $this->assertTrue($userTanpaPeran->fresh()->punyaPeran('pasien'));
+
+        // Dashboard dapat diakses dengan sukses
+        $dashboardResponse = $this->get('/pasien/dashboard');
+        $dashboardResponse->assertStatus(200);
+        $dashboardResponse->assertDontSee('Akses Ditolak');
+    }
 }
