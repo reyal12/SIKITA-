@@ -6,22 +6,14 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientProfileController;
 use App\Http\Controllers\PaymentController;
-use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
-// Rute beranda diarahkan ke dashboard jika sudah login, atau ke halaman login jika belum
+
 Route::get('/', function () {
-    if (auth()->check()) {
-        /** @var User $user */
-        $user = auth()->user();
+    return view('landing');
+})->name('landing');
 
-        return redirect()->route($user->dashboardRoute());
-    }
 
-    return redirect()->route('login');
-});
-
-// Rute khusus tamu (guest) - Pengguna yang sudah login akan otomatis dialihkan ke dashboard sesuai perannya
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
@@ -30,10 +22,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [RegisterController::class, 'register']);
 });
 
-// Rute logout (hanya dapat diakses melalui metode POST dengan proteksi autentikasi dan CSRF)
+
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
-// Rute dashboard masing-masing peran yang dilindungi oleh middleware auth dan peran
+
 Route::middleware(['auth', 'peran:admin'])->group(function () {
     Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
     Route::post('/admin/pembayaran', [PaymentController::class, 'store'])->name('admin.pembayaran.store');
