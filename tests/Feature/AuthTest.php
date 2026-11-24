@@ -67,6 +67,55 @@ class AuthTest extends TestCase
         $this->assertEquals(0, DB::table('pasien')->count());
     }
 
+    public function test_dokter_dapat_mendaftar_dan_masuk_dengan_portal_dokter(): void
+    {
+        $this->get(route('login.dokter'))
+            ->assertOk()
+            ->assertSee('Masuk Dokter')
+            ->assertSee(route('register.dokter'));
+
+        $this->post(route('register.dokter.store'), [
+            'name' => 'Dr. Sari',
+            'email' => 'sari.dokter@example.com',
+            'phone' => '08123456789',
+            'license_number' => 'SIP-TEST-001',
+            'specialty' => 'Dokter Umum',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertRedirect(route('login.dokter'));
+
+        $doctor = User::where('email', 'sari.dokter@example.com')->firstOrFail();
+        $this->assertTrue($doctor->punyaPeran('dokter'));
+        $this->assertDatabaseHas('dokter', [
+            'pengguna_id' => $doctor->id,
+            'nama_lengkap' => 'Dr. Sari',
+            'nomor_izin_praktik' => 'SIP-TEST-001',
+            'aktif' => true,
+        ]);
+
+        $this->post(route('login.dokter.store'), [
+            'email' => 'sari.dokter@example.com',
+            'password' => 'password123',
+        ])->assertRedirect(route('dokter.dashboard'));
+
+        $this->assertAuthenticatedAs($doctor);
+    }
+
+    public function test_pasien_tidak_dapat_menggunakan_portal_login_dokter(): void
+    {
+        $patient = $this->createPatientUser();
+
+        $this->from(route('login.dokter'))
+            ->post(route('login.dokter.store'), [
+                'email' => $patient->email,
+                'password' => 'password123',
+            ])
+            ->assertRedirect(route('login.dokter'))
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
     public function test_login_admin_dari_seeder_berhasil_dan_masuk_ke_dashboard_admin(): void
     {
         $this->seed(AdminSeeder::class);
@@ -243,5 +292,13 @@ class AuthTest extends TestCase
         $dashboardResponse = $this->get('/pasien/dashboard');
         $dashboardResponse->assertStatus(200);
         $dashboardResponse->assertDontSee('Akses Ditolak');
+    }
+
+    private function createPatientUser(): User
+    {
+        $patient = User::factory()->create(['password' => 'password123']);
+        $patient->peran()->attach(Peran::where('kode', 'pasien')->value('id'));
+
+        return $patient;
     }
 }
