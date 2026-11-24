@@ -32,10 +32,6 @@
                     <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
                     <span>Pembayaran</span>
                 </a>
-                <a class="{{ $activePage === 'profil' ? 'is-active' : '' }}" href="{{ route('pasien.profil') }}" @if ($activePage === 'profil') aria-current="page" @endif>
-                    <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
-                    <span>Profil</span>
-                </a>
             </nav>
             <div class="patient-sidebar-footer">
                 <span class="patient-sidebar-footer-mark">+</span>
@@ -50,9 +46,11 @@
                     <h1>{{ $pageTitle }}</h1>
                 </div>
                 <div class="patient-user">
-                    <span class="patient-user-avatar" aria-label="Avatar {{ $user->name }}">
-                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($user->name, 0, 1)) }}
-                    </span>
+                    <a class="patient-user-profile-link" href="{{ route('pasien.profil') }}" aria-label="Informasi akun pasien">
+                        <span class="patient-user-avatar" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                        </span>
+                    </a>
                     <span class="patient-user-info">
                         <strong>{{ $user->name }}</strong>
                         <span class="patient-role-badge">Patient</span>

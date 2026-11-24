@@ -17,6 +17,7 @@
                 </div>
             </div>
             <div class="dashboard-header-actions">
+                <a class="sikita-btn-outline" href="{{ route('obat.index') }}">Data obat</a>
                 <span class="muted">{{ $user->name }} &bull; {{ $user->email }}</span>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

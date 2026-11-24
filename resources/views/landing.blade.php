@@ -1246,6 +1246,8 @@
     <div class="lp-nav-actions">
         <a href="{{ route('login') }}" class="lp-btn-outline">Masuk</a>
         <a href="{{ route('register') }}" class="lp-btn-primary">Daftar Sekarang</a>
+        <a href="{{ route('login.dokter') }}" class="lp-btn-outline">Portal Dokter</a>
+        <a href="{{ route('register.dokter') }}" class="lp-btn-outline">Daftar Dokter</a>
     </div>
 
     <button class="lp-hamburger" id="hamburger" aria-label="Buka menu navigasi" aria-expanded="false">
@@ -1267,6 +1269,8 @@
     <div class="lp-mobile-nav-actions">
         <a href="{{ route('login') }}" class="sikita-btn-outline">Masuk</a>
         <a href="{{ route('register') }}" class="sikita-btn-primer">Daftar Sekarang</a>
+        <a href="{{ route('login.dokter') }}" class="sikita-btn-outline">Masuk Dokter</a>
+        <a href="{{ route('register.dokter') }}" class="sikita-btn-outline">Daftar sebagai Dokter</a>
     </div>
 </div>
 
@@ -1305,7 +1309,7 @@
         </div>
     </section>
 
-    {{-- ======================= TENTANG ======================= --}}
+
     <section class="lp-about lp-section" id="tentang" aria-labelledby="about-title">
         <div class="lp-container">
             <div class="lp-about-inner">
