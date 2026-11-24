@@ -2,11 +2,11 @@
 
 @section('content')
     <div style="margin-bottom: 1.5rem;">
-        <h2 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--warna-teks);">Masuk ke Akun</h2>
+        <h2 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--warna-teks);">{{ ($doctorLogin ?? false) ? 'Masuk Dokter' : 'Masuk ke Akun' }}</h2>
         <p style="font-size: 0.875rem; color: var(--warna-teks-muted); margin: 0.25rem 0 0 0;">Silakan masukkan email dan kata sandi Anda.</p>
     </div>
 
-    <form method="POST" action="{{ route('login') }}">
+    <form method="POST" action="{{ ($doctorLogin ?? false) ? route('login.dokter.store') : route('login') }}">
         @csrf
 
         <!-- Input Email -->
@@ -70,11 +70,23 @@
         </button>
     </form>
 
-    <!-- Tautan Pendaftaran Pasien -->
     <div style="text-align: center; margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--warna-netral); font-size: 0.875rem; color: var(--warna-teks-muted);">
-        Belum memiliki akun pasien?
-        <a href="{{ route('register') }}" style="color: var(--warna-primer); font-weight: 600; text-decoration: none; margin-left: 0.25rem;">
-            Daftar Sekarang
-        </a>
+        @if ($doctorLogin ?? false)
+            Belum memiliki akun dokter?
+            <a href="{{ route('register.dokter') }}" style="color: var(--warna-primer); font-weight: 600; text-decoration: none; margin-left: 0.25rem;">
+                Daftar sebagai dokter
+            </a>
+        @else
+            Belum memiliki akun pasien?
+            <a href="{{ route('register') }}" style="color: var(--warna-primer); font-weight: 600; text-decoration: none; margin-left: 0.25rem;">
+                Daftar Sekarang
+            </a>
+            <div style="margin-top: 0.65rem;">
+                Dokter?
+                <a href="{{ route('login.dokter') }}" style="color: var(--warna-primer); font-weight: 600; text-decoration: none; margin-left: 0.25rem;">
+                    Masuk di sini
+                </a>
+            </div>
+        @endif
     </div>
 @endsection
