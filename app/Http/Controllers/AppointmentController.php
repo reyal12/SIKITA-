@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
+use App\AppointmentAvailability;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
+    public function __construct(private AppointmentAvailability $appointmentAvailability) {}
+
     public function availableSlots(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -36,7 +38,7 @@ class AppointmentController extends Controller
         }
 
         return response()->json([
-            'slots' => $this->availableTimes(
+            'slots' => $this->appointmentAvailability->availableTimes(
                 (int) $validated['doctor_id'],
                 $validated['appointment_date'],
             ),
@@ -67,7 +69,7 @@ class AppointmentController extends Controller
 
             if (! $doctorIsActive || ! in_array(
                 $validated['start_time'],
-                $this->availableTimes(
+                $this->appointmentAvailability->availableTimes(
                     (int) $validated['doctor_id'],
                     $validated['appointment_date'],
                     true,
@@ -169,58 +171,5 @@ class AppointmentController extends Controller
 
         return redirect()->route('dokter.dashboard')
             ->with('sukses', 'Status janji temu diperbarui menjadi selesai.');
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function availableTimes(int $doctorId, string $date, bool $lockSchedules = false): array
-    {
-        $schedulesQuery = DB::table('jadwal_dokter')
-            ->where('dokter_id', $doctorId)
-            ->where('hari_dalam_minggu', Carbon::parse($date)->dayOfWeek)
-            ->orderBy('waktu_mulai');
-
-        if ($lockSchedules) {
-            $schedulesQuery->lockForUpdate();
-        }
-
-        $schedules = $schedulesQuery->get();
-        $appointments = DB::table('janji_temu')
-            ->where('dokter_id', $doctorId)
-            ->whereDate('tanggal_janji', $date)
-            ->where('status', 'terjadwal')
-            ->get(['waktu_mulai']);
-        $availableTimes = [];
-
-        foreach ($schedules as $schedule) {
-            $scheduleAppointments = $appointments->filter(function (object $appointment) use ($schedule): bool {
-                $appointmentTime = substr($appointment->waktu_mulai, 0, 5);
-
-                return $appointmentTime >= substr($schedule->waktu_mulai, 0, 5)
-                    && $appointmentTime < substr($schedule->waktu_selesai, 0, 5);
-            });
-
-            if ($scheduleAppointments->count() >= $schedule->maksimal_pasien) {
-                continue;
-            }
-
-            $start = Carbon::createFromFormat('H:i:s', $schedule->waktu_mulai);
-            $end = Carbon::createFromFormat('H:i:s', $schedule->waktu_selesai);
-
-            while ($start->copy()->addMinutes($schedule->durasi_janji_menit)->lessThanOrEqualTo($end)) {
-                $time = $start->format('H:i');
-
-                if (Carbon::parse($date.' '.$time)->isFuture() && ! $appointments->contains(
-                    fn (object $appointment): bool => substr($appointment->waktu_mulai, 0, 5) === $time,
-                )) {
-                    $availableTimes[] = $time;
-                }
-
-                $start->addMinutes($schedule->durasi_janji_menit);
-            }
-        }
-
-        return array_values(array_unique($availableTimes));
     }
 }

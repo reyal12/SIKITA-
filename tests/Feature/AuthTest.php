@@ -87,6 +87,18 @@ class AuthTest extends TestCase
         $dashboardResponse->assertStatus(200);
         $dashboardResponse->assertSee('Panel Administrator Klinik');
         $dashboardResponse->assertSee($adminEmail);
+        $dashboardResponse->assertSee('Navigasi administrator');
+        $dashboardResponse->assertSee('href="'.route('admin.pendaftaran.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.dokter.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.jadwal-dokter.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.spesialis.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.akun.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.obat.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.informasi-klinik.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.pelayanan.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.laporan.index').'"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.dashboard').'#catat-tagihan"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.dashboard').'#riwayat-pembayaran"', false);
     }
 
     public function test_pasien_membuka_dashboard_admin_menghasilkan_error_403_berbahasa_indonesia(): void

@@ -119,6 +119,352 @@ body {
     background-color: rgba(118, 147, 130, 0.08);
 }
 
+.admin-app-body {
+    background: #f5f7f4;
+}
+
+.admin-app-shell {
+    display: grid;
+    grid-template-columns: 252px minmax(0, 1fr);
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    height: 100vh;
+    flex-direction: column;
+    padding: 1.5rem 1rem 1rem;
+    border-right: 1px solid rgba(192, 195, 185, 0.55);
+    background: var(--warna-kartu);
+}
+
+.admin-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0 0.5rem;
+    color: var(--warna-teks);
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+}
+
+.admin-sidebar-logo {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 13px;
+    background: var(--warna-primer);
+    color: #fff;
+}
+
+.admin-sidebar-title {
+    margin: 2rem 0 0.65rem;
+    padding: 0 0.65rem;
+    color: #849087;
+    font-size: 0.72rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.admin-sidebar-nav {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.admin-sidebar-nav a {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 11px;
+    color: #68756c;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.admin-sidebar-nav a:hover,
+.admin-sidebar-nav a:focus-visible,
+.admin-sidebar-nav a.is-active {
+    background: #edf3ee;
+    color: var(--warna-primer-hover);
+    outline: none;
+}
+
+.admin-sidebar-nav a.is-active {
+    font-weight: 700;
+}
+
+.admin-sidebar-nav a svg {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+}
+
+.admin-sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: auto;
+    padding: 0.85rem 0.65rem;
+    border-radius: 12px;
+    background: #f5f7f4;
+    color: #78847b;
+    font-size: 0.75rem;
+    line-height: 1.5;
+}
+
+.admin-sidebar-footer strong {
+    color: #46564a;
+}
+
+.admin-sidebar-footer-mark {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 10px;
+    background: #e5eee7;
+    color: var(--warna-primer-hover);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.admin-main {
+    min-width: 0;
+    padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
+}
+
+.admin-topbar {
+    display: flex;
+    max-width: 1440px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 auto 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(192, 195, 185, 0.55);
+}
+
+.admin-topbar-eyebrow {
+    margin: 0 0 0.2rem;
+    color: var(--warna-teks-muted);
+    font-size: 0.8rem;
+}
+
+.admin-topbar h1 {
+    margin: 0;
+    color: var(--warna-teks);
+    font-size: 1.45rem;
+}
+
+.admin-user {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.admin-user-avatar {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 50%;
+    background: #e5eee7;
+    color: var(--warna-primer-hover);
+    font-weight: 750;
+}
+
+.admin-user-info {
+    display: grid;
+    gap: 0.15rem;
+    font-size: 0.8rem;
+}
+
+.admin-user-info strong {
+    color: var(--warna-teks);
+}
+
+.admin-user-info span {
+    color: var(--warna-teks-muted);
+}
+
+.admin-logout-button {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid rgba(192, 195, 185, 0.7);
+    border-radius: 10px;
+    background: #fff;
+    color: #68756c;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.admin-logout-button:hover,
+.admin-logout-button:focus-visible {
+    background: #edf3ee;
+    color: var(--warna-primer-hover);
+}
+
+.admin-logout-button svg {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+}
+
+.admin-page-content {
+    width: min(1440px, 100%);
+    margin: 0 auto;
+}
+
+.admin-dashboard-section {
+    scroll-margin-top: 1.5rem;
+}
+
+.admin-patient-card {
+    padding: 1.35rem;
+}
+
+.admin-patient-toolbar {
+    align-items: flex-start;
+}
+
+.admin-patient-add {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.admin-patient-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+}
+
+.admin-patient-actions .sikita-btn-outline,
+.admin-patient-delete {
+    min-height: 36px;
+    padding: 0.45rem 0.7rem;
+    border-radius: 9px;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 650;
+}
+
+.admin-patient-delete {
+    border: 1px solid rgba(185, 74, 72, 0.3);
+    background: #fff;
+    color: var(--warna-bahaya);
+    cursor: pointer;
+}
+
+.admin-patient-delete:hover,
+.admin-patient-delete:focus-visible {
+    background: var(--warna-bahaya-latar);
+}
+
+.admin-patient-form .section-heading {
+    margin-bottom: 1rem;
+}
+
+.admin-patient-form-grid {
+    margin-bottom: 1.25rem;
+}
+
+.admin-patient-address {
+    grid-column: 1 / -1;
+}
+
+.admin-appointment-fields {
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(192, 195, 185, 0.55);
+}
+
+.admin-schedule-notice {
+    margin-bottom: 1rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid #e8dfc8;
+    border-radius: 10px;
+    background: #fff9e9;
+    color: #755300;
+    font-size: 0.88rem;
+}
+
+.admin-patient-form .field-hint {
+    min-height: 1.1rem;
+    font-size: 0.78rem;
+}
+
+.admin-patient-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    margin-top: 0.5rem;
+}
+
+.admin-patient-form-actions .sikita-btn-primer {
+    width: auto;
+}
+
+.admin-patient-pagination {
+    margin-top: 1rem;
+}
+
+.admin-schedule-card {
+    margin-top: 1rem;
+}
+
+.admin-schedule-inline-form {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(100px, 1fr)) auto;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-schedule-inline-form .sikita-input {
+    min-width: 0;
+    padding: 0.55rem 0.6rem;
+    font-size: 0.82rem;
+}
+
+.admin-schedule-inline-form .sikita-btn-primer {
+    width: auto;
+    white-space: nowrap;
+}
+
+.admin-schedule-create {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.admin-schedule-create h3 {
+    margin: 0;
+    font-size: 0.98rem;
+}
+
 .dashboard-shell {
     width: min(1120px, calc(100% - 2rem));
     margin: 0 auto;
@@ -427,6 +773,76 @@ body {
 }
 
 @media (max-width: 760px) {
+    .admin-app-shell {
+        grid-template-columns: 1fr;
+        align-content: start;
+    }
+
+    .admin-sidebar {
+        z-index: 5;
+        position: sticky;
+        height: auto;
+        padding: 0.7rem 0.85rem;
+        border-right: 0;
+        border-bottom: 1px solid rgba(192, 195, 185, 0.55);
+    }
+
+    .admin-sidebar-brand {
+        padding: 0 0.35rem;
+    }
+
+    .admin-sidebar-logo {
+        width: 34px;
+        height: 34px;
+    }
+
+    .admin-sidebar-title,
+    .admin-sidebar-footer {
+        display: none;
+    }
+
+    .admin-sidebar-nav {
+        display: flex;
+        overflow-x: auto;
+        gap: 0.35rem;
+        margin-top: 0.6rem;
+        scrollbar-width: thin;
+    }
+
+    .admin-sidebar-nav a {
+        min-height: 38px;
+        flex: 0 0 auto;
+        gap: 0.45rem;
+        padding: 0.5rem 0.65rem;
+        font-size: 0.82rem;
+    }
+
+    .admin-sidebar-nav a svg {
+        width: 17px;
+        height: 17px;
+    }
+
+    .admin-main {
+        padding-top: 1.15rem;
+    }
+
+    .admin-topbar {
+        margin-bottom: 1.15rem;
+    }
+
+    .admin-patient-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-patient-add {
+        align-self: flex-start;
+    }
+
+    .admin-schedule-inline-form {
+        min-width: 740px;
+    }
+
     .dashboard-grid--stats {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -470,6 +886,27 @@ body {
 }
 
 @media (max-width: 520px) {
+    .admin-main {
+        padding-right: 0.85rem;
+        padding-left: 0.85rem;
+    }
+
+    .admin-topbar {
+        align-items: flex-start;
+    }
+
+    .admin-topbar h1 {
+        font-size: 1.2rem;
+    }
+
+    .admin-user {
+        gap: 0.45rem;
+    }
+
+    .admin-user-info {
+        display: none;
+    }
+
     .dashboard-shell {
         width: min(100% - 1rem, 1120px);
         padding-top: 1rem;
@@ -486,6 +923,108 @@ body {
 
     .dashboard-card {
         padding: 1rem;
+    }
+}
+
+.admin-filter-form {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.8fr) minmax(150px, 0.8fr) minmax(220px, 1.5fr) auto;
+    align-items: end;
+    gap: 0.8rem;
+    margin: 0 0 1.2rem;
+}
+
+.admin-filter-form .sikita-btn-primer {
+    width: auto;
+    white-space: nowrap;
+}
+
+.service-prescription {
+    margin-top: 0.65rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e8ece9;
+}
+
+.service-prescription ul {
+    margin: 0.25rem 0 0;
+    padding-left: 1.1rem;
+}
+
+.report-heading {
+    justify-content: space-between;
+}
+
+.report-metrics,
+.report-sections {
+    margin-top: 1rem;
+}
+
+.report-status-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.report-status-list > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid #edf0ee;
+}
+
+.report-revenue {
+    margin: 0.5rem 0;
+    color: var(--warna-primer-hover);
+    font-size: 1.7rem;
+    font-weight: 750;
+}
+
+.report-print-footer {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .admin-filter-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-filter-search {
+        grid-column: 1 / -1;
+    }
+}
+
+@media print {
+    body,
+    .admin-app-body {
+        background: #fff;
+    }
+
+    .admin-sidebar,
+    .admin-topbar,
+    .no-print {
+        display: none !important;
+    }
+
+    .admin-app-shell {
+        display: block;
+        min-height: 0;
+    }
+
+    .admin-main,
+    .admin-page-content {
+        padding: 0;
+    }
+
+    .sikita-card {
+        border: 0;
+        box-shadow: none;
+    }
+
+    .report-print-footer {
+        display: block;
+        margin-top: 1rem;
+        color: #536459;
+        font-size: 0.75rem;
     }
 }
 

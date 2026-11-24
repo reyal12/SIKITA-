@@ -20,7 +20,9 @@ class DashboardController extends Controller
                 'appointments_scheduled' => DB::table('janji_temu')
                     ->where('status', 'terjadwal')
                     ->count(),
-                'patients' => DB::table('pasien')->count(),
+                'patients' => DB::table('pasien')
+                    ->whereNull('deleted_at')
+                    ->count(),
                 'unpaid_payments' => DB::table('pembayaran')
                     ->where('status', 'menunggu')
                     ->count(),
@@ -44,6 +46,7 @@ class DashboardController extends Controller
                 ->limit(100)
                 ->get(),
             'patients' => DB::table('pasien')
+                ->whereNull('deleted_at')
                 ->orderBy('nama_lengkap')
                 ->get(['id', 'nama_lengkap', 'nomor_pasien']),
             'paymentAppointments' => DB::table('janji_temu')
@@ -78,6 +81,7 @@ class DashboardController extends Controller
     public function dokter(Request $request): View
     {
         $doctor = DB::table('dokter')->where('pengguna_id', $request->user()->id)->first();
+        abort_if($doctor !== null && ! $doctor->aktif, 403);
         $appointments = collect();
 
         if ($doctor !== null) {

@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             PeranSeeder::class,
+            SpecialtySeeder::class,
             AdminSeeder::class,
         ]);
     }

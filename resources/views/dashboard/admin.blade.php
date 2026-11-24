@@ -6,40 +6,29 @@
     <title>Dashboard Admin &bull; SIKITA</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body>
-    <main class="dashboard-shell">
-        <header class="dashboard-header">
-            <div class="dashboard-brand">
-                <div class="dashboard-brand-mark">S</div>
-                <div>
-                    <h1>SIKITA</h1>
-                    <p>Panel Administrator Klinik</p>
-                </div>
-            </div>
-            <div class="dashboard-header-actions">
-                <span class="muted">{{ $user->name }} &bull; {{ $user->email }}</span>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="sikita-btn-outline" type="submit">Keluar</button>
-                </form>
-            </div>
-        </header>
+<body class="admin-app-body">
+    <div class="admin-app-shell">
+        @include('dashboard.admin.partials.sidebar', ['activePage' => 'dashboard'])
 
-        @if (session('sukses'))
-            <div class="dashboard-alert" role="status">{{ session('sukses') }}</div>
-        @endif
-        @if ($errors->any())
-            <div class="dashboard-alert dashboard-alert--error" role="alert">
-                <strong>Periksa kembali data tagihan.</strong>
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        <main class="admin-main">
+            @include('dashboard.admin.partials.topbar', ['pageTitle' => 'Ringkasan Klinik'])
 
-        <section class="dashboard-grid dashboard-grid--stats" aria-label="Ringkasan klinik">
+            <div class="admin-page-content">
+                @if (session('sukses'))
+                    <div class="dashboard-alert" role="status">{{ session('sukses') }}</div>
+                @endif
+                @if ($errors->any())
+                    <div class="dashboard-alert dashboard-alert--error" role="alert">
+                        <strong>Periksa kembali data tagihan.</strong>
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+        <section id="ringkasan" class="dashboard-grid dashboard-grid--stats admin-dashboard-section" aria-label="Ringkasan klinik">
             <article class="sikita-card dashboard-stat">
                 <span class="muted">Kunjungan hari ini</span>
                 <strong>{{ $stats['appointments_today'] }}</strong>
@@ -58,7 +47,7 @@
             </article>
         </section>
 
-        <section class="sikita-card dashboard-card">
+        <section id="pendaftaran" class="sikita-card dashboard-card admin-dashboard-section">
             <div class="section-heading">
                 <div>
                     <h2>Data pendaftaran</h2>
@@ -91,7 +80,7 @@
         </section>
 
         <section class="dashboard-grid dashboard-grid--two">
-            <article class="sikita-card dashboard-card">
+            <article id="catat-tagihan" class="sikita-card dashboard-card admin-dashboard-section">
                 <div class="section-heading">
                     <div>
                         <h2>Catat tagihan</h2>
@@ -159,7 +148,7 @@
                 @endif
             </article>
 
-            <article class="sikita-card dashboard-card">
+            <article id="riwayat-pembayaran" class="sikita-card dashboard-card admin-dashboard-section">
                 <div class="section-heading">
                     <div>
                         <h2>Riwayat pembayaran</h2>
@@ -203,9 +192,41 @@
                 @endif
             </article>
         </section>
-    </main>
+            </div>
+        </main>
+    </div>
 
     <script>
+        const adminNavigationLinks = Array.from(document.querySelectorAll('.admin-sidebar-nav a[href*="#"]'));
+        const adminSections = adminNavigationLinks
+            .map((link) => document.getElementById(new URL(link.href).hash.slice(1)))
+            .filter((section) => section !== null);
+
+        if (adminSections.length > 0) {
+            const adminSectionObserver = new IntersectionObserver((entries) => {
+                const visibleSection = entries
+                    .filter((entry) => entry.isIntersecting)
+                    .sort((first, second) => second.intersectionRatio - first.intersectionRatio)[0];
+
+                if (!visibleSection) {
+                    return;
+                }
+
+                adminNavigationLinks.forEach((link) => {
+                    const isActive = link.hash === `#${visibleSection.target.id}`;
+                    link.classList.toggle('is-active', isActive);
+
+                    if (isActive) {
+                        link.setAttribute('aria-current', 'page');
+                    } else {
+                        link.removeAttribute('aria-current');
+                    }
+                });
+            }, { rootMargin: '-15% 0px -65% 0px' });
+
+            adminSections.forEach((section) => adminSectionObserver.observe(section));
+        }
+
         const patientField = document.getElementById('patient_id');
         const appointmentField = document.getElementById('appointment_id');
         if (patientField && appointmentField) {
