@@ -2,57 +2,78 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Admin\StoreDokterRequest;
+use App\Http\Requests\Admin\StoreJadwalDokterRequest;
+use App\Http\Requests\Admin\UpdateDokterRequest;
+use App\Http\Requests\Admin\UpdateJadwalDokterRequest;
+use App\Models\Dokter;
+use App\Models\JadwalDokter;
 use App\Models\Peran;
+use App\Models\Spesialis;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Unique;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AdminDoctorController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'specialty_id' => ['nullable', 'integer', 'exists:spesialis,id'],
+        ]);
+
         return view('dashboard.admin.dokter.index', [
-            'doctors' => DB::table('dokter as d')
-                ->join('spesialis as s', 's.id', '=', 'd.spesialis_id')
-                ->leftJoin('users as u', 'u.id', '=', 'd.pengguna_id')
-                ->select('d.*', 's.nama', 'u.email')
-                ->orderBy('d.nama_lengkap')
-                ->paginate(15),
+            'doctors' => Dokter::query()
+                ->with(['spesialis', 'pengguna'])
+                ->when($filters['search'] ?? null, function ($query, string $search): void {
+                    $query->where(function ($query) use ($search): void {
+                        $query->where('nama_lengkap', 'like', '%'.$search.'%')
+                            ->orWhere('nomor_dokter', 'like', '%'.$search.'%');
+                    });
+                })
+                ->when(
+                    $filters['specialty_id'] ?? null,
+                    fn ($query, int $specialtyId) => $query->where('spesialis_id', $specialtyId),
+                )
+                ->orderBy('nama_lengkap')
+                ->paginate(15)
+                ->withQueryString(),
+            'filters' => $filters,
+            'specialties' => $this->specialties(),
             'user' => request()->user(),
         ]);
     }
 
-    public function schedules(): View
+    public function schedules(Request $request): View
     {
+        $filters = $request->validate([
+            'doctor_id' => ['nullable', 'integer', 'exists:dokter,id'],
+            'weekday' => ['nullable', 'integer', 'between:0,6'],
+        ]);
+
         return view('dashboard.admin.jadwal.index', [
-            'schedules' => DB::table('jadwal_dokter as j')
-                ->join('dokter as d', 'd.id', '=', 'j.dokter_id')
-                ->join('spesialis as s', 's.id', '=', 'd.spesialis_id')
-                ->select([
-                    'j.dokter_id',
-                    'j.hari_dalam_minggu',
-                    'j.waktu_mulai',
-                    'j.waktu_selesai',
-                    'j.durasi_janji_menit',
-                    'j.maksimal_pasien',
-                    'd.nama_lengkap',
-                    'd.aktif',
-                    's.nama',
-                ])
-                ->orderBy('j.hari_dalam_minggu')
-                ->orderBy('j.waktu_mulai')
-                ->orderBy('d.nama_lengkap')
+            'schedules' => JadwalDokter::query()
+                ->with(['dokter.spesialis'])
+                ->when(
+                    $filters['doctor_id'] ?? null,
+                    fn ($query, int $doctorId) => $query->where('dokter_id', $doctorId),
+                )
+                ->when(
+                    isset($filters['weekday']),
+                    fn ($query) => $query->where('hari_dalam_minggu', $filters['weekday']),
+                )
+                ->orderBy('hari_dalam_minggu')
+                ->orderBy('waktu_mulai')
                 ->paginate(25)
                 ->withQueryString(),
+            'doctors' => Dokter::query()->orderBy('nama_lengkap')->get(),
+            'filters' => $filters,
             'user' => request()->user(),
         ]);
     }
@@ -62,86 +83,56 @@ class AdminDoctorController extends Controller
         return view('dashboard.admin.dokter.form', [
             'doctor' => null,
             'specialties' => $this->specialties(),
-            'schedules' => collect(),
             'user' => request()->user(),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreDokterRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'specialty_id' => ['required', 'integer', 'exists:spesialis,id'],
-            'license_number' => ['required', 'string', 'max:50', 'unique:dokter,nomor_izin_praktik'],
-            'phone' => ['nullable', 'string', 'max:30'],
-        ]);
+        $validated = $request->validated();
 
-        DB::transaction(function () use ($validated): void {
-            $doctorRole = Peran::where('kode', 'dokter')->firstOrFail();
+        DB::transaction(function () use ($request, $validated): void {
+            Spesialis::query()->whereKey($validated['specialty_id'])->lockForUpdate()->firstOrFail();
+            $doctorRole = Peran::query()->where('kode', 'dokter')->firstOrFail();
             $account = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
+                'password' => $validated['password'],
             ]);
-            $account->peran()->attach($doctorRole->id);
+            $account->peran()->attach($doctorRole->id, [
+                'ditetapkan_oleh' => $request->user()->id,
+            ]);
 
-            DB::table('dokter')->insert([
+            Dokter::query()->create([
                 'pengguna_id' => $account->id,
                 'spesialis_id' => $validated['specialty_id'],
-                'nomor_dokter' => 'DR-'.Str::upper(Str::random(12)),
+                'nomor_dokter' => $validated['doctor_number'],
                 'nama_lengkap' => $validated['name'],
                 'nomor_izin_praktik' => $validated['license_number'],
                 'telepon' => $validated['phone'] ?? null,
                 'aktif' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
             ]);
         });
 
-        $destination = $request->routeIs('admin.akun.dokter.store')
-            ? 'admin.akun.index'
-            : 'admin.dokter.index';
-
-        return redirect()->route($destination)
+        return redirect()->route('admin.dokter.index')
             ->with('sukses', 'Akun dan data dokter berhasil dibuat. Silakan tambahkan jadwal praktik.');
     }
 
     public function edit(int $doctor): View
     {
-        $doctorRecord = $this->findDoctor($doctor);
+        $doctorRecord = Dokter::query()->with('pengguna')->findOrFail($doctor);
 
         return view('dashboard.admin.dokter.form', [
             'doctor' => $doctorRecord,
             'specialties' => $this->specialties(),
-            'schedules' => DB::table('jadwal_dokter')
-                ->where('dokter_id', $doctor)
-                ->orderBy('hari_dalam_minggu')
-                ->orderBy('waktu_mulai')
-                ->get(),
             'user' => request()->user(),
         ]);
     }
 
-    public function update(Request $request, int $doctor): RedirectResponse
+    public function update(UpdateDokterRequest $request, int $doctor): RedirectResponse
     {
-        $doctorRecord = $this->findDoctor($doctor);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => $doctorRecord->pengguna_id === null
-                ? ['nullable', 'email', 'max:255', 'unique:users,email']
-                : ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($doctorRecord->pengguna_id)],
-            'specialty_id' => ['required', 'integer', 'exists:spesialis,id'],
-            'license_number' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('dokter', 'nomor_izin_praktik')->ignore($doctor),
-            ],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'aktif' => ['required', 'boolean'],
-        ]);
+        $doctorRecord = Dokter::query()->with('pengguna')->findOrFail($doctor);
+        $validated = $request->validated();
 
         if (! $validated['aktif'] && $this->hasUpcomingAppointments($doctor)) {
             throw ValidationException::withMessages([
@@ -149,23 +140,24 @@ class AdminDoctorController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($doctor, $doctorRecord, $validated): void {
-            if ($doctorRecord->pengguna_id !== null) {
-                DB::table('users')->where('id', $doctorRecord->pengguna_id)->update([
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                    'updated_at' => now(),
-                ]);
-            }
+        DB::transaction(function () use ($doctorRecord, $validated): void {
+            Spesialis::query()->whereKey($validated['specialty_id'])->lockForUpdate()->firstOrFail();
 
-            DB::table('dokter')->where('id', $doctor)->update([
+            $doctorRecord->fill([
                 'spesialis_id' => $validated['specialty_id'],
+                'nomor_dokter' => $validated['doctor_number'],
                 'nama_lengkap' => $validated['name'],
                 'nomor_izin_praktik' => $validated['license_number'],
                 'telepon' => $validated['phone'] ?? null,
                 'aktif' => (bool) $validated['aktif'],
-                'updated_at' => now(),
-            ]);
+            ])->save();
+
+            if ($doctorRecord->pengguna !== null) {
+                $doctorRecord->pengguna->fill([
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                ])->save();
+            }
         });
 
         return redirect()->route('admin.dokter.edit', $doctor)
@@ -174,7 +166,37 @@ class AdminDoctorController extends Controller
 
     public function destroy(int $doctor): RedirectResponse
     {
-        $this->findDoctor($doctor);
+        DB::transaction(function () use ($doctor): void {
+            $doctorRecord = Dokter::query()->with('pengguna')->lockForUpdate()->findOrFail($doctor);
+
+            if ($this->doctorHasReferences($doctorRecord)) {
+                throw ValidationException::withMessages([
+                    'doctor' => 'Dokter memiliki jadwal, janji temu, atau pemeriksaan sehingga tidak dapat dihapus permanen. Gunakan tombol Nonaktifkan untuk mempertahankan riwayat.',
+                ]);
+            }
+
+            $account = $doctorRecord->pengguna;
+            $doctorRecord->delete();
+
+            if ($account !== null) {
+                $doctorRoleId = Peran::query()->where('kode', 'dokter')->value('id');
+                if ($doctorRoleId !== null) {
+                    $account->peran()->detach($doctorRoleId);
+                }
+
+                if (! $account->peran()->exists()) {
+                    $account->delete();
+                }
+            }
+        });
+
+        return redirect()->route('admin.dokter.index')
+            ->with('sukses', 'Data dokter berhasil dihapus.');
+    }
+
+    public function deactivate(int $doctor): RedirectResponse
+    {
+        $doctorRecord = Dokter::query()->findOrFail($doctor);
 
         if ($this->hasUpcomingAppointments($doctor)) {
             throw ValidationException::withMessages([
@@ -182,89 +204,82 @@ class AdminDoctorController extends Controller
             ]);
         }
 
-        DB::table('dokter')->where('id', $doctor)->update([
-            'aktif' => false,
-            'updated_at' => now(),
-        ]);
+        $doctorRecord->update(['aktif' => false]);
 
         return redirect()->route('admin.dokter.index')
-            ->with('sukses', 'Dokter berhasil dinonaktifkan. Riwayat dan akun tetap tersimpan.');
+            ->with('sukses', 'Dokter berhasil dinonaktifkan.');
     }
 
-    public function storeSchedule(Request $request, int $doctor): RedirectResponse
+    public function storeSchedule(StoreJadwalDokterRequest $request): RedirectResponse
     {
-        $doctorRecord = $this->findDoctor($doctor);
-        abort_unless($doctorRecord->aktif, 404);
-        $validated = $request->validate($this->scheduleRules($doctor));
+        $validated = $request->validated();
 
-        $this->ensureScheduleDoesNotOverlap($doctor, $validated);
+        DB::transaction(function () use ($validated): void {
+            $doctor = Dokter::query()
+                ->whereKey($validated['doctor_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        DB::table('jadwal_dokter')->insert([
-            ...$this->scheduleAttributes($validated),
-            'dokter_id' => $doctor,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            if (! $doctor->aktif) {
+                throw ValidationException::withMessages([
+                    'doctor_id' => 'Jadwal hanya dapat dibuat untuk dokter aktif.',
+                ]);
+            }
 
-        return redirect()->route('admin.dokter.edit', $doctor)
+            $this->ensureScheduleDoesNotOverlap((int) $doctor->id, $validated);
+            JadwalDokter::query()->create($this->scheduleAttributes($validated));
+        });
+
+        return redirect()->route('admin.jadwal-dokter.index')
             ->with('sukses', 'Jadwal praktik berhasil ditambahkan.');
     }
 
-    public function updateSchedule(Request $request, int $schedule): RedirectResponse
+    public function updateSchedule(UpdateJadwalDokterRequest $request, int $schedule): RedirectResponse
     {
-        $scheduleRecord = $this->findSchedule($schedule);
-        $doctor = (int) $scheduleRecord->dokter_id;
-        abort_unless($this->findDoctor($doctor)->aktif, 404);
-        $validated = $request->validate($this->scheduleRules($doctor, $schedule));
+        $validated = $request->validated();
 
-        $this->ensureScheduleDoesNotOverlap($doctor, $validated, $schedule);
-        $this->ensureScheduleChangePreservesAppointments($scheduleRecord, $validated);
+        DB::transaction(function () use ($schedule, $validated): void {
+            $scheduleRecord = JadwalDokter::query()->lockForUpdate()->findOrFail($schedule);
+            $doctorIds = collect([$scheduleRecord->dokter_id, $validated['doctor_id']])
+                ->map(fn ($id): int => (int) $id)
+                ->unique()
+                ->sort()
+                ->values();
+            Dokter::query()->whereIn('id', $doctorIds)->orderBy('id')->lockForUpdate()->get();
+            $doctor = Dokter::query()->findOrFail($validated['doctor_id']);
 
-        DB::table('jadwal_dokter')->where('id', $schedule)->update(
-            $this->scheduleAttributes($validated) + ['updated_at' => now()],
-        );
+            if (! $doctor->aktif && (int) $doctor->id !== (int) $scheduleRecord->dokter_id) {
+                throw ValidationException::withMessages([
+                    'doctor_id' => 'Jadwal hanya dapat dipindahkan ke dokter yang aktif.',
+                ]);
+            }
 
-        return redirect()->route('admin.dokter.edit', $doctor)
+            $this->ensureScheduleDoesNotOverlap((int) $doctor->id, $validated, $schedule);
+            $this->ensureScheduleChangePreservesAppointments($scheduleRecord, $validated);
+            $scheduleRecord->update($this->scheduleAttributes($validated));
+        });
+
+        return redirect()->route('admin.jadwal-dokter.index')
             ->with('sukses', 'Jadwal praktik berhasil diperbarui.');
     }
 
     public function destroySchedule(int $schedule): RedirectResponse
     {
-        $scheduleRecord = $this->findSchedule($schedule);
-        $this->ensureScheduleChangePreservesAppointments($scheduleRecord, []);
-        DB::table('jadwal_dokter')->where('id', $schedule)->delete();
+        DB::transaction(function () use ($schedule): void {
+            $scheduleRecord = JadwalDokter::query()->lockForUpdate()->findOrFail($schedule);
+            Dokter::query()->whereKey($scheduleRecord->dokter_id)->lockForUpdate()->firstOrFail();
 
-        return redirect()->route('admin.dokter.edit', $scheduleRecord->dokter_id)
+            if ($this->scheduleHasAppointments($scheduleRecord)) {
+                throw ValidationException::withMessages([
+                    'schedule' => 'Jadwal ini sudah digunakan oleh janji temu dan tidak dapat dihapus.',
+                ]);
+            }
+
+            $scheduleRecord->delete();
+        });
+
+        return redirect()->route('admin.jadwal-dokter.index')
             ->with('sukses', 'Jadwal praktik berhasil dihapus.');
-    }
-
-    public function accounts(): View
-    {
-        return view('dashboard.admin.akun.index', [
-            'accounts' => User::query()->with('peran')->orderBy('name')->paginate(20),
-            'user' => request()->user(),
-        ]);
-    }
-
-    /**
-     * @return array<string, array<int, string|Unique>>
-     */
-    private function scheduleRules(int $doctor, ?int $schedule = null): array
-    {
-        return [
-            'weekday' => ['required', 'integer', 'between:0,6'],
-            'start_time' => [
-                'required',
-                'date_format:H:i',
-                Rule::unique('jadwal_dokter', 'waktu_mulai')
-                    ->where('dokter_id', $doctor)
-                    ->where('hari_dalam_minggu', request()->input('weekday'))
-                    ->ignore($schedule),
-            ],
-            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
-            'appointment_duration' => ['required', 'integer', 'in:15,20,30,45,60'],
-            'max_patients' => ['required', 'integer', 'between:1,500'],
-        ];
     }
 
     /**
@@ -272,7 +287,7 @@ class AdminDoctorController extends Controller
      */
     private function ensureScheduleDoesNotOverlap(int $doctor, array $validated, ?int $exceptSchedule = null): void
     {
-        $overlapQuery = DB::table('jadwal_dokter')
+        $overlapQuery = JadwalDokter::query()
             ->where('dokter_id', $doctor)
             ->where('hari_dalam_minggu', $validated['weekday'])
             ->where('waktu_mulai', '<', $validated['end_time'])
@@ -292,15 +307,13 @@ class AdminDoctorController extends Controller
     /**
      * @param  array<string, mixed>  $validated
      */
-    private function ensureScheduleChangePreservesAppointments(object $schedule, array $validated): void
+    private function ensureScheduleChangePreservesAppointments(JadwalDokter $schedule, array $validated): void
     {
-        $startTime = $validated['start_time'] ?? null;
-        $endTime = $validated['end_time'] ?? null;
-        $weekday = isset($validated['weekday']) ? (int) $validated['weekday'] : null;
-        $duration = isset($validated['appointment_duration'])
-            ? (int) $validated['appointment_duration']
-            : (int) $schedule->durasi_janji_menit;
-        $maxPatients = isset($validated['max_patients']) ? (int) $validated['max_patients'] : null;
+        $startTime = $validated['start_time'];
+        $endTime = $validated['end_time'];
+        $weekday = (int) $validated['weekday'];
+        $duration = (int) $validated['appointment_duration'];
+        $maxPatients = (int) $validated['max_patients'];
         $bookedAppointments = DB::table('janji_temu')
             ->where('dokter_id', $schedule->dokter_id)
             ->where('status', 'terjadwal')
@@ -317,8 +330,14 @@ class AdminDoctorController extends Controller
             })
             ->groupBy('tanggal_janji');
 
+        if ((int) $validated['doctor_id'] !== (int) $schedule->dokter_id && $bookedAppointments->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'doctor_id' => 'Dokter tidak dapat diganti karena jadwal ini memiliki janji temu mendatang.',
+            ]);
+        }
+
         foreach ($bookedAppointments as $appointmentsForDate) {
-            if ($maxPatients !== null && $appointmentsForDate->count() > $maxPatients) {
+            if ($appointmentsForDate->count() > $maxPatients) {
                 throw ValidationException::withMessages([
                     'max_patients' => 'Kuota baru lebih kecil dari jumlah pasien yang sudah terdaftar pada jadwal mendatang.',
                 ]);
@@ -328,14 +347,12 @@ class AdminDoctorController extends Controller
                 $appointmentTime = substr($appointment->waktu_mulai, 0, 5);
                 $appointmentMinutes = ((int) substr($appointmentTime, 0, 2) * 60)
                     + (int) substr($appointmentTime, 3, 2);
-                $scheduleStartMinutes = $startTime === null
-                    ? 0
-                    : ((int) substr($startTime, 0, 2) * 60) + (int) substr($startTime, 3, 2);
-                $endMinutes = $endTime === null
-                    ? 0
-                    : ((int) substr($endTime, 0, 2) * 60) + (int) substr($endTime, 3, 2);
+                $scheduleStartMinutes = ((int) substr($startTime, 0, 2) * 60)
+                    + (int) substr($startTime, 3, 2);
+                $endMinutes = ((int) substr($endTime, 0, 2) * 60)
+                    + (int) substr($endTime, 3, 2);
 
-                if ($startTime === null || $endTime === null || $weekday !== (int) $schedule->hari_dalam_minggu
+                if ($weekday !== (int) $schedule->hari_dalam_minggu
                     || $appointmentTime < $startTime
                     || $appointmentMinutes + $duration > $endMinutes
                     || ($appointmentMinutes - $scheduleStartMinutes) % $duration !== 0) {
@@ -354,6 +371,7 @@ class AdminDoctorController extends Controller
     private function scheduleAttributes(array $validated): array
     {
         return [
+            'dokter_id' => $validated['doctor_id'],
             'hari_dalam_minggu' => $validated['weekday'],
             'waktu_mulai' => $validated['start_time'],
             'waktu_selesai' => $validated['end_time'],
@@ -362,29 +380,11 @@ class AdminDoctorController extends Controller
         ];
     }
 
-    private function findDoctor(int $doctor): object
+    private function doctorHasReferences(Dokter $doctor): bool
     {
-        $record = DB::table('dokter as d')
-            ->leftJoin('users as u', 'u.id', '=', 'd.pengguna_id')
-            ->where('d.id', $doctor)
-            ->select([
-                'd.*',
-                'u.email',
-            ])
-            ->first();
-
-        abort_if($record === null, 404);
-
-        return $record;
-    }
-
-    private function findSchedule(int $schedule): object
-    {
-        $record = DB::table('jadwal_dokter')->where('id', $schedule)->first();
-
-        abort_if($record === null, 404);
-
-        return $record;
+        return $doctor->jadwal()->exists()
+            || DB::table('janji_temu')->where('dokter_id', $doctor->id)->exists()
+            || DB::table('rekam_medis')->where('dokter_id', $doctor->id)->exists();
     }
 
     private function hasUpcomingAppointments(int $doctor): bool
@@ -396,8 +396,24 @@ class AdminDoctorController extends Controller
             ->exists();
     }
 
+    private function scheduleHasAppointments(JadwalDokter $schedule): bool
+    {
+        return DB::table('janji_temu')
+            ->where('dokter_id', $schedule->dokter_id)
+            ->whereNotNull('waktu_mulai')
+            ->get(['tanggal_janji', 'waktu_mulai'])
+            ->contains(function (object $appointment) use ($schedule): bool {
+                $appointmentDate = Carbon::parse($appointment->tanggal_janji);
+                $appointmentTime = substr($appointment->waktu_mulai, 0, 5);
+
+                return $appointmentDate->dayOfWeek === (int) $schedule->hari_dalam_minggu
+                    && $appointmentTime >= substr($schedule->waktu_mulai, 0, 5)
+                    && $appointmentTime < substr($schedule->waktu_selesai, 0, 5);
+            });
+    }
+
     private function specialties(): Collection
     {
-        return DB::table('spesialis')->orderBy('nama')->get(['id', 'nama']);
+        return Spesialis::query()->orderBy('nama')->get(['id', 'kode', 'nama', 'deskripsi']);
     }
 }

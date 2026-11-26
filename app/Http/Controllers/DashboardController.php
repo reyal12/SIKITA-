@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dokter;
+use App\Models\JanjiTemu;
+use App\Models\Pasien;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -11,69 +15,39 @@ class DashboardController extends Controller
 {
     public function admin(Request $request): View
     {
+        $todayInJakarta = Carbon::today('Asia/Jakarta')->toDateString();
+
         return view('dashboard.admin', [
             'user' => $request->user(),
             'stats' => [
                 'appointments_today' => DB::table('janji_temu')
-                    ->whereDate('tanggal_janji', today())
+                    ->whereDate('tanggal_janji', $todayInJakarta)
                     ->count(),
-                'appointments_scheduled' => DB::table('janji_temu')
-                    ->where('status', 'terjadwal')
+                'active_doctors' => Dokter::query()
+                    ->where('aktif', true)
                     ->count(),
-                'patients' => DB::table('pasien')
-                    ->whereNull('deleted_at')
-                    ->count(),
-                'unpaid_payments' => DB::table('pembayaran')
-                    ->where('status', 'menunggu')
+                'patients' => Pasien::query()
                     ->count(),
             ],
-            'appointments' => DB::table('janji_temu as j')
-                ->join('pasien as p', 'p.id', '=', 'j.pasien_id')
-                ->join('dokter as d', 'd.id', '=', 'j.dokter_id')
-                ->select([
-                    'j.id',
-                    'j.nomor_janji',
-                    'j.nomor_antrean',
-                    'j.tanggal_janji',
-                    'j.waktu_mulai',
-                    'j.status',
-                    'j.keluhan_utama',
-                    'p.nama_lengkap as nama_pasien',
-                    'd.nama_lengkap as nama_dokter',
+            'appointments' => JanjiTemu::query()
+                ->with([
+                    'pasien:id,nomor_pasien,nama_lengkap',
+                    'dokter:id,nama_lengkap',
                 ])
-                ->orderByDesc('j.tanggal_janji')
-                ->orderBy('j.waktu_mulai')
-                ->limit(100)
-                ->get(),
-            'patients' => DB::table('pasien')
-                ->whereNull('deleted_at')
-                ->orderBy('nama_lengkap')
-                ->get(['id', 'nama_lengkap', 'nomor_pasien']),
-            'paymentAppointments' => DB::table('janji_temu')
-                ->join('pasien', 'pasien.id', '=', 'janji_temu.pasien_id')
-                ->orderByDesc('tanggal_janji')
-                ->get([
-                    'janji_temu.id',
-                    'janji_temu.pasien_id',
-                    'janji_temu.nomor_janji',
-                    'janji_temu.tanggal_janji',
-                    'pasien.nama_lengkap as nama_pasien',
-                ]),
-            'payments' => DB::table('pembayaran as b')
-                ->join('pasien as p', 'p.id', '=', 'b.pasien_id')
-                ->leftJoin('janji_temu as j', 'j.id', '=', 'b.janji_temu_id')
                 ->select([
-                    'b.id',
-                    'b.nomor_pembayaran',
-                    'b.jumlah',
-                    'b.metode_pembayaran',
-                    'b.status',
-                    'b.created_at',
-                    'p.nama_lengkap as nama_pasien',
-                    'j.nomor_janji',
+                    'id',
+                    'pasien_id',
+                    'dokter_id',
+                    'nomor_janji',
+                    'nomor_antrean',
+                    'tanggal_janji',
+                    'waktu_mulai',
+                    'status',
+                    'created_at',
                 ])
-                ->orderByDesc('b.created_at')
-                ->limit(100)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(10)
                 ->get(),
         ]);
     }

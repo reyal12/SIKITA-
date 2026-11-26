@@ -11,15 +11,15 @@
             @if ($activePage === 'dashboard') aria-current="page" @endif
         >
             <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg>
-            <span>Ringkasan</span>
+            <span>Dashboard</span>
         </a>
         <a
-            class="{{ $activePage === 'pendaftaran' ? 'is-active' : '' }}"
-            href="{{ route('admin.pendaftaran.index') }}"
-            @if ($activePage === 'pendaftaran') aria-current="page" @endif
+            class="{{ $activePage === 'pasien' ? 'is-active' : '' }}"
+            href="{{ route('admin.pasien.index') }}"
+            @if ($activePage === 'pasien') aria-current="page" @endif
         >
             <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
-            <span>Pendaftaran</span>
+            <span>Pasien</span>
         </a>
         <a
             class="{{ $activePage === 'dokter' ? 'is-active' : '' }}"
@@ -35,23 +35,7 @@
             @if ($activePage === 'jadwal') aria-current="page" @endif
         >
             <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h3M8 17h6"/></svg>
-            <span>Jadwal</span>
-        </a>
-        <a
-            class="{{ $activePage === 'spesialis' ? 'is-active' : '' }}"
-            href="{{ route('admin.spesialis.index') }}"
-            @if ($activePage === 'spesialis') aria-current="page" @endif
-        >
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>
-            <span>Spesialis</span>
-        </a>
-        <a
-            class="{{ $activePage === 'akun' ? 'is-active' : '' }}"
-            href="{{ route('admin.akun.index') }}"
-            @if ($activePage === 'akun') aria-current="page" @endif
-        >
-            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M17 8h4M19 6v4"/></svg>
-            <span>Akun</span>
+            <span>Jadwal Dokter</span>
         </a>
         <a
             class="{{ $activePage === 'obat' ? 'is-active' : '' }}"
@@ -62,40 +46,24 @@
             <span>Obat</span>
         </a>
         <a
-            class="{{ $activePage === 'informasi-klinik' ? 'is-active' : '' }}"
-            href="{{ route('admin.informasi-klinik.index') }}"
-            @if ($activePage === 'informasi-klinik') aria-current="page" @endif
+            class="{{ $activePage === 'akun' ? 'is-active' : '' }}"
+            href="{{ route('admin.akun.index') }}"
+            @if ($activePage === 'akun') aria-current="page" @endif
         >
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h.01M15 10h.01M9 14h.01M15 14h.01M10 21v-4h4v4"/></svg>
-            <span>Informasi Klinik</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M17 8h4M19 6v4"/></svg>
+            <span>Akun</span>
         </a>
         <a
-            class="{{ $activePage === 'pelayanan' ? 'is-active' : '' }}"
-            href="{{ route('admin.pelayanan.index') }}"
-            @if ($activePage === 'pelayanan') aria-current="page" @endif
+            class="{{ $activePage === 'pemantauan' ? 'is-active' : '' }}"
+            href="{{ route('admin.pemantauan.pendaftaran.index') }}"
+            @if ($activePage === 'pemantauan') aria-current="page" @endif
         >
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>
-            <span>Pelayanan</span>
-        </a>
-        <a
-            class="{{ $activePage === 'laporan' ? 'is-active' : '' }}"
-            href="{{ route('admin.laporan.index') }}"
-            @if ($activePage === 'laporan') aria-current="page" @endif
-        >
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17M8 16v-4M13 16V8M18 16V5"/></svg>
-            <span>Laporan</span>
-        </a>
-        <a href="{{ route('admin.dashboard') }}#catat-tagihan">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
-            <span>Catat Tagihan</span>
-        </a>
-        <a href="{{ route('admin.dashboard') }}#riwayat-pembayaran">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
-            <span>Riwayat Pembayaran</span>
+            <span>Pantau Pendaftaran &amp; Pelayanan</span>
         </a>
     </nav>
     <div class="admin-sidebar-footer">
         <span class="admin-sidebar-footer-mark" aria-hidden="true">+</span>
-        <span>Panel Administrator<br><strong>Klinik SIKITA</strong></span>
+        <span>Administrator<br><strong>Klinik SIKITA</strong></span>
     </div>
 </aside>

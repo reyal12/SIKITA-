@@ -4,9 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Peran;
 use App\Models\User;
-use Database\Seeders\AdminSeeder;
+use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PeranSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -69,7 +70,7 @@ class AuthTest extends TestCase
 
     public function test_login_admin_dari_seeder_berhasil_dan_masuk_ke_dashboard_admin(): void
     {
-        $this->seed(AdminSeeder::class);
+        $this->seed(DatabaseSeeder::class);
 
         $adminEmail = config('sikita.admin.email', 'admin@sikita.test');
         $adminPassword = config('sikita.admin.password', 'admin12345');
@@ -88,17 +89,25 @@ class AuthTest extends TestCase
         $dashboardResponse->assertSee('Panel Administrator Klinik');
         $dashboardResponse->assertSee($adminEmail);
         $dashboardResponse->assertSee('Navigasi administrator');
-        $dashboardResponse->assertSee('href="'.route('admin.pendaftaran.index').'"', false);
+        $dashboardResponse->assertSee('Dashboard');
+        $dashboardResponse->assertSee('Pasien');
+        $dashboardResponse->assertSee('Dokter');
+        $dashboardResponse->assertSee('Jadwal Dokter');
+        $dashboardResponse->assertSee('Obat');
+        $dashboardResponse->assertSee('Akun');
+        $dashboardResponse->assertSee('Pantau Pendaftaran & Pelayanan');
+        $dashboardResponse->assertSee('href="'.route('admin.pasien.index').'"', false);
         $dashboardResponse->assertSee('href="'.route('admin.dokter.index').'"', false);
         $dashboardResponse->assertSee('href="'.route('admin.jadwal-dokter.index').'"', false);
-        $dashboardResponse->assertSee('href="'.route('admin.spesialis.index').'"', false);
+        $dashboardResponse->assertDontSee('href="/admin/spesialis"', false);
         $dashboardResponse->assertSee('href="'.route('admin.akun.index').'"', false);
         $dashboardResponse->assertSee('href="'.route('admin.obat.index').'"', false);
-        $dashboardResponse->assertSee('href="'.route('admin.informasi-klinik.index').'"', false);
-        $dashboardResponse->assertSee('href="'.route('admin.pelayanan.index').'"', false);
-        $dashboardResponse->assertSee('href="'.route('admin.laporan.index').'"', false);
-        $dashboardResponse->assertSee('href="'.route('admin.dashboard').'#catat-tagihan"', false);
-        $dashboardResponse->assertSee('href="'.route('admin.dashboard').'#riwayat-pembayaran"', false);
+        $dashboardResponse->assertSee('href="'.route('admin.pemantauan.pendaftaran.index').'"', false);
+        $dashboardResponse->assertDontSee('Informasi Klinik');
+        $dashboardResponse->assertDontSee('Laporan');
+        $dashboardResponse->assertDontSee('Catat tagihan');
+        $dashboardResponse->assertDontSee('Riwayat pembayaran');
+        $dashboardResponse->assertDontSee('Tagihan menunggu');
     }
 
     public function test_pasien_membuka_dashboard_admin_menghasilkan_error_403_berbahasa_indonesia(): void
@@ -116,6 +125,63 @@ class AuthTest extends TestCase
         $response->assertStatus(403);
         $response->assertSee('Akses Ditolak');
         $response->assertSee('Anda tidak memiliki hak akses untuk membuka halaman ini.');
+    }
+
+    public function test_doctor_and_patient_are_denied_access_to_admin_routes(): void
+    {
+        foreach (['dokter', 'pasien'] as $role) {
+            $user = User::factory()->create();
+            $user->peran()->attach(Peran::where('kode', $role)->value('id'));
+
+            foreach ([
+                '/admin/dashboard',
+                '/admin/pasien',
+                '/admin/dokter',
+                '/admin/jadwal-dokter',
+                '/admin/obat',
+                '/admin/akun',
+                '/admin/pemantauan/pendaftaran',
+                '/admin/pemantauan/pelayanan',
+            ] as $uri) {
+                $this->actingAs($user)->get($uri)->assertForbidden();
+            }
+        }
+    }
+
+    public function test_every_admin_route_uses_authentication_and_admin_role_middleware(): void
+    {
+        $adminRoutes = array_filter(
+            app('router')->getRoutes()->getRoutes(),
+            static fn (Route $route): bool => str_starts_with($route->uri(), 'admin/'),
+        );
+
+        $this->assertNotEmpty($adminRoutes);
+
+        foreach ($adminRoutes as $route) {
+            $this->assertContains('auth', $route->middleware(), $route->uri());
+            $this->assertContains('peran:admin', $route->middleware(), $route->uri());
+        }
+    }
+
+    public function test_admin_sidebar_highlights_the_current_menu_on_all_seven_sections(): void
+    {
+        $admin = User::factory()->create();
+        $admin->peran()->attach(Peran::where('kode', 'admin')->value('id'));
+
+        foreach ([
+            'admin.dashboard',
+            'admin.pasien.index',
+            'admin.dokter.index',
+            'admin.jadwal-dokter.index',
+            'admin.obat.index',
+            'admin.akun.index',
+            'admin.pemantauan.pendaftaran.index',
+            'admin.pemantauan.pelayanan.index',
+        ] as $routeName) {
+            $response = $this->actingAs($admin)->get(route($routeName))->assertOk();
+
+            $this->assertSame(1, substr_count($response->getContent(), 'aria-current="page"'), $routeName);
+        }
     }
 
     public function test_pengguna_yang_sudah_login_diarahkan_ke_dashboard_saat_membuka_halaman_login_atau_register(): void

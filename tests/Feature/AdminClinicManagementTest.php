@@ -29,6 +29,7 @@ class AdminClinicManagementTest extends TestCase
         $doctorData = [
             'name' => 'Dokter Akun',
             'email' => 'dokter.akun@example.test',
+            'doctor_number' => 'DR-AKUN-001',
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'specialty_id' => $specialtyId,
@@ -37,13 +38,13 @@ class AdminClinicManagementTest extends TestCase
         ];
 
         $this->actingAs($admin)
-            ->get(route('admin.akun.dokter.create'))
+            ->get(route('admin.dokter.create'))
             ->assertOk()
-            ->assertSee('Buat Akun Dokter');
+            ->assertSee('Tambah Dokter');
 
         $response = $this->actingAs($admin)
-            ->post(route('admin.akun.dokter.store'), $doctorData);
-        $response->assertRedirect(route('admin.akun.index'));
+            ->post(route('admin.dokter.store'), $doctorData);
+        $response->assertRedirect(route('admin.dokter.index'));
         $account = User::where('email', $doctorData['email'])->firstOrFail();
         $this->assertTrue(Hash::check($doctorData['password'], $account->password));
         $this->assertTrue($account->punyaPeran('dokter'));
@@ -58,14 +59,15 @@ class AdminClinicManagementTest extends TestCase
 
         $weekday = now()->addWeek()->dayOfWeek;
         $this->actingAs($admin)
-            ->post(route('admin.dokter.jadwal.store', $doctorId), [
+            ->post(route('admin.jadwal-dokter.store'), [
+                'doctor_id' => $doctorId,
                 'weekday' => $weekday,
                 'start_time' => '09:00',
                 'end_time' => '12:00',
                 'appointment_duration' => 30,
                 'max_patients' => 12,
             ])
-            ->assertRedirect(route('admin.dokter.edit', $doctorId));
+            ->assertRedirect(route('admin.jadwal-dokter.index'));
 
         $scheduleId = (int) DB::table('jadwal_dokter')->where('dokter_id', $doctorId)->value('id');
         $this->assertDatabaseHas('jadwal_dokter', [
@@ -75,14 +77,15 @@ class AdminClinicManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->put(route('admin.dokter.jadwal.update', $scheduleId), [
+            ->put(route('admin.jadwal-dokter.update', $scheduleId), [
+                'doctor_id' => $doctorId,
                 'weekday' => $weekday,
                 'start_time' => '09:00',
                 'end_time' => '12:00',
                 'appointment_duration' => 30,
                 'max_patients' => 15,
             ])
-            ->assertRedirect(route('admin.dokter.edit', $doctorId));
+            ->assertRedirect(route('admin.jadwal-dokter.index'));
         $this->assertDatabaseHas('jadwal_dokter', [
             'id' => $scheduleId,
             'maksimal_pasien' => 15,
@@ -91,18 +94,27 @@ class AdminClinicManagementTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.dokter.edit', $doctorId))
             ->assertOk()
-            ->assertSee('Jadwal praktik mingguan')
-            ->assertSee('Kuota pasien');
+            ->assertSee('Nomor dokter')
+            ->assertSee('Kelola jadwal dokter');
 
         $this->actingAs($admin)
             ->get(route('admin.jadwal-dokter.index'))
             ->assertOk()
             ->assertSee('Jadwal praktik mingguan')
+            ->assertSee('Dokter Akun')
+            ->assertSee('Kuota pasien');
+
+        $this->actingAs($admin)
+            ->get(route('admin.jadwal-dokter.index', [
+                'doctor_id' => $doctorId,
+                'weekday' => $weekday,
+            ]))
+            ->assertOk()
             ->assertSee('Dokter Akun');
 
         $this->actingAs($admin)
-            ->delete(route('admin.dokter.jadwal.destroy', $scheduleId))
-            ->assertRedirect(route('admin.dokter.edit', $doctorId));
+            ->delete(route('admin.jadwal-dokter.destroy', $scheduleId))
+            ->assertRedirect(route('admin.jadwal-dokter.index'));
         $this->assertDatabaseMissing('jadwal_dokter', ['id' => $scheduleId]);
 
         $this->actingAs($admin)
@@ -122,7 +134,8 @@ class AdminClinicManagementTest extends TestCase
         $this->createSchedule($doctorId, $weekday, '09:00', '11:00', 5);
 
         $this->actingAs($admin)
-            ->post(route('admin.dokter.jadwal.store', $doctorId), [
+            ->post(route('admin.jadwal-dokter.store'), [
+                'doctor_id' => $doctorId,
                 'weekday' => $weekday,
                 'start_time' => '10:00',
                 'end_time' => '12:00',
@@ -137,7 +150,8 @@ class AdminClinicManagementTest extends TestCase
 
         $scheduleId = (int) DB::table('jadwal_dokter')->where('dokter_id', $doctorId)->value('id');
         $this->actingAs($admin)
-            ->put(route('admin.dokter.jadwal.update', $scheduleId), [
+            ->put(route('admin.jadwal-dokter.update', $scheduleId), [
+                'doctor_id' => $doctorId,
                 'weekday' => $weekday,
                 'start_time' => '09:30',
                 'end_time' => '11:00',
@@ -147,7 +161,8 @@ class AdminClinicManagementTest extends TestCase
             ->assertSessionHasErrors('start_time');
 
         $this->actingAs($admin)
-            ->put(route('admin.dokter.jadwal.update', $scheduleId), [
+            ->put(route('admin.jadwal-dokter.update', $scheduleId), [
+                'doctor_id' => $doctorId,
                 'weekday' => $weekday,
                 'start_time' => '09:00',
                 'end_time' => '11:00',
@@ -157,8 +172,8 @@ class AdminClinicManagementTest extends TestCase
             ->assertSessionHasErrors('max_patients');
 
         $this->actingAs($admin)
-            ->delete(route('admin.dokter.jadwal.destroy', $scheduleId))
-            ->assertSessionHasErrors('start_time');
+            ->delete(route('admin.jadwal-dokter.destroy', $scheduleId))
+            ->assertSessionHasErrors('schedule');
         $this->assertDatabaseHas('jadwal_dokter', ['id' => $scheduleId]);
     }
 
@@ -166,28 +181,29 @@ class AdminClinicManagementTest extends TestCase
     {
         $admin = $this->createUserWithRole('admin');
         $this->actingAs($admin)
-            ->post(route('admin.spesialis.store'), [
+            ->post(route('admin.dokter.spesialisasi.store'), [
                 'kode' => 'SP-BUAT',
                 'nama' => 'Spesialis Dibuat',
                 'deskripsi' => 'Spesialis melalui halaman admin.',
             ])
-            ->assertRedirect(route('admin.spesialis.index'));
+            ->assertRedirect(route('admin.dokter.index'));
         $specialtyId = (int) DB::table('spesialis')
             ->where('kode', 'SP-BUAT')
             ->value('id');
 
         $this->actingAs($admin)
-            ->get(route('admin.spesialis.index'))
+            ->get(route('admin.dokter.index'))
             ->assertOk()
+            ->assertSee('Kelola spesialisasi')
             ->assertSee('Spesialis Dibuat');
 
         $this->actingAs($admin)
-            ->put(route('admin.spesialis.update', $specialtyId), [
+            ->put(route('admin.dokter.spesialisasi.update', $specialtyId), [
                 'kode' => 'SP-UPDATE',
                 'nama' => 'Spesialis Diperbarui',
                 'deskripsi' => 'Deskripsi baru.',
             ])
-            ->assertRedirect(route('admin.spesialis.index'));
+            ->assertRedirect(route('admin.dokter.index'));
 
         $this->assertDatabaseHas('spesialis', [
             'id' => $specialtyId,
@@ -197,14 +213,14 @@ class AdminClinicManagementTest extends TestCase
         $this->createDoctor($specialtyId);
 
         $this->actingAs($admin)
-            ->delete(route('admin.spesialis.destroy', $specialtyId))
+            ->delete(route('admin.dokter.spesialisasi.destroy', $specialtyId))
             ->assertSessionHasErrors('specialty');
         $this->assertDatabaseHas('spesialis', ['id' => $specialtyId]);
 
         $newSpecialtyId = $this->createSpecialty('SP-BARU', 'Spesialis Baru');
         $this->actingAs($admin)
-            ->delete(route('admin.spesialis.destroy', $newSpecialtyId))
-            ->assertRedirect(route('admin.spesialis.index'));
+            ->delete(route('admin.dokter.spesialisasi.destroy', $newSpecialtyId))
+            ->assertRedirect(route('admin.dokter.index'));
         $this->assertDatabaseMissing('spesialis', ['id' => $newSpecialtyId]);
     }
 
@@ -220,6 +236,10 @@ class AdminClinicManagementTest extends TestCase
             ->delete(route('admin.dokter.destroy', $doctorId))
             ->assertSessionHasErrors('doctor');
 
+        $this->actingAs($admin)
+            ->patch(route('admin.dokter.deactivate', $doctorId))
+            ->assertSessionHasErrors('doctor');
+
         $this->assertDatabaseHas('dokter', ['id' => $doctorId, 'aktif' => true]);
     }
 
@@ -233,6 +253,7 @@ class AdminClinicManagementTest extends TestCase
 
         $this->actingAs($admin)
             ->put(route('admin.dokter.update', $doctorId), [
+                'doctor_number' => 'DR-DIPERBARUI',
                 'name' => 'Dokter Diperbarui',
                 'email' => 'dokter.diperbarui@example.test',
                 'specialty_id' => $newSpecialtyId,
@@ -249,18 +270,25 @@ class AdminClinicManagementTest extends TestCase
         ]);
         $this->assertDatabaseHas('dokter', [
             'id' => $doctorId,
+            'nomor_dokter' => 'DR-DIPERBARUI',
             'spesialis_id' => $newSpecialtyId,
             'nomor_izin_praktik' => 'SIP-DIPERBARUI',
         ]);
 
         $this->actingAs($admin)
-            ->delete(route('admin.dokter.destroy', $doctorId))
+            ->patch(route('admin.dokter.deactivate', $doctorId))
             ->assertRedirect(route('admin.dokter.index'));
 
         $this->assertDatabaseHas('dokter', ['id' => $doctorId, 'aktif' => false]);
         $this->actingAs(User::findOrFail($doctor->pengguna_id))
             ->get(route('dokter.dashboard'))
             ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->delete(route('admin.dokter.destroy', $doctorId))
+            ->assertRedirect(route('admin.dokter.index'));
+        $this->assertDatabaseMissing('dokter', ['id' => $doctorId]);
+        $this->assertDatabaseMissing('users', ['id' => $doctor->pengguna_id]);
     }
 
     public function test_admin_can_manage_legacy_doctor_without_account_and_open_schedule_menu(): void
@@ -289,11 +317,12 @@ class AdminClinicManagementTest extends TestCase
             ->get(route('admin.dokter.edit', $doctorId))
             ->assertOk()
             ->assertSee('Dokter ini belum terhubung ke akun pengguna.')
-            ->assertSee('Jadwal praktik mingguan')
+            ->assertSee('Kelola jadwal dokter')
             ->assertSee('Dokter Lama');
 
         $this->actingAs($admin)
             ->put(route('admin.dokter.update', $doctorId), [
+                'doctor_number' => 'DR-LAMA-UPDATED',
                 'name' => 'Dokter Lama Diperbarui',
                 'specialty_id' => $specialtyId,
                 'license_number' => 'SIP-TANPA-AKUN',
@@ -321,7 +350,10 @@ class AdminClinicManagementTest extends TestCase
             ->get(route('admin.dokter.index'))
             ->assertForbidden();
         $this->actingAs($patient)
-            ->get(route('admin.spesialis.index'))
+            ->post(route('admin.dokter.spesialisasi.store'), [
+                'kode' => 'SP-TOLAK',
+                'nama' => 'Spesialis Ditolak',
+            ])
             ->assertForbidden();
         $this->actingAs($patient)
             ->get(route('admin.akun.index'))

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -57,20 +58,15 @@ class SpecialtySeeder extends Seeder
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ],
-            [
-                'kode' => 'SP-KULIT',
-                'nama' => 'Kulit dan Kelamin',
-                'deskripsi' => 'Pemeriksaan dan penanganan kesehatan kulit dan kelamin.',
-                'created_at' => $timestamp,
-                'updated_at' => $timestamp,
-            ],
-            [
-                'kode' => 'SP-BEDAH',
-                'nama' => 'Bedah',
-                'deskripsi' => 'Konsultasi dan pelayanan medis bidang bedah.',
-                'created_at' => $timestamp,
-                'updated_at' => $timestamp,
-            ],
         ], ['kode'], ['nama', 'deskripsi', 'updated_at']);
+
+        DB::table('spesialis')
+            ->whereIn('kode', ['SP-KULIT', 'SP-BEDAH'])
+            ->whereNotExists(function (Builder $query): void {
+                $query->selectRaw('1')
+                    ->from('dokter')
+                    ->whereColumn('dokter.spesialis_id', 'spesialis.id');
+            })
+            ->delete();
     }
 }

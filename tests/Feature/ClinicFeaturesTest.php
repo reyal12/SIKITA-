@@ -247,59 +247,21 @@ class ClinicFeaturesTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_record_and_update_a_payment_status(): void
+    public function test_admin_payment_mutation_routes_are_removed(): void
     {
         $admin = $this->createUserWithRole('admin');
-        $patientId = $this->createPatientRecord($this->createUserWithRole('pasien'));
-        $doctorId = $this->createDoctor();
-        $appointmentId = $this->createAppointment(
-            $patientId,
-            $doctorId,
-            now()->addDay()->toDateString(),
-            '09:00:00',
-        );
-
-        $this->actingAs($admin)->post(route('admin.pembayaran.store'), [
-            'patient_id' => $patientId,
-            'appointment_id' => $appointmentId,
-            'amount' => '125000',
-            'payment_method' => 'transfer_bank',
-            'status' => 'menunggu',
-            'notes' => 'Konsultasi',
-        ])->assertRedirect(route('admin.dashboard'));
-
-        $payment = DB::table('pembayaran')->first();
-        $this->assertSame('menunggu', $payment->status);
-        $this->assertNull($payment->dibayar_pada);
-
         $this->actingAs($admin)
-            ->patch(route('admin.pembayaran.status', $payment->id), ['status' => 'dibayar'])
-            ->assertRedirect(route('admin.dashboard'));
-
-        $this->assertDatabaseHas('pembayaran', [
-            'id' => $payment->id,
-            'status' => 'dibayar',
-        ]);
-        $this->assertNotNull(DB::table('pembayaran')->where('id', $payment->id)->value('dibayar_pada'));
+            ->post('/admin/pembayaran')
+            ->assertNotFound();
+        $this->actingAs($admin)
+            ->patch('/admin/pembayaran/1')
+            ->assertNotFound();
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Data pendaftaran')
-            ->assertSee('Riwayat pembayaran')
-            ->assertSee('BYR-');
-
-        $otherPatientId = $this->createPatientRecord($this->createUserWithRole('pasien'));
-        $this->actingAs($admin)
-            ->post(route('admin.pembayaran.store'), [
-                'patient_id' => $otherPatientId,
-                'appointment_id' => $appointmentId,
-                'amount' => '10000',
-                'payment_method' => 'tunai',
-                'status' => 'menunggu',
-            ])
-            ->assertSessionHasErrors('appointment_id');
-
-        $this->assertSame(1, DB::table('pembayaran')->count());
+            ->assertDontSee('Riwayat pembayaran')
+            ->assertDontSee('Catat tagihan');
+        $this->assertDatabaseCount('pembayaran', 0);
     }
 
     public function test_doctor_can_complete_only_their_own_scheduled_appointments(): void
