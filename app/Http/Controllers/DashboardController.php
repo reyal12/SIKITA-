@@ -57,6 +57,11 @@ class DashboardController extends Controller
         $doctor = DB::table('dokter')->where('pengguna_id', $request->user()->id)->first();
         abort_if($doctor !== null && ! $doctor->aktif, 403);
         $appointments = collect();
+        $stats = [
+            'scheduled_today' => 0,
+            'scheduled_total' => 0,
+            'completed' => 0,
+        ];
 
         if ($doctor !== null) {
             $appointments = DB::table('janji_temu as j')
@@ -70,19 +75,41 @@ class DashboardController extends Controller
                     'j.waktu_mulai',
                     'j.status',
                     'j.keluhan_utama',
+                    'p.id as pasien_id',
                     'p.nama_lengkap as nama_pasien',
                     'p.nomor_pasien',
+                    'r.id as rekam_medis_id',
                 ])
+                ->leftJoin('rekam_medis as r', 'r.janji_temu_id', '=', 'j.id')
                 ->orderByDesc('j.tanggal_janji')
                 ->orderBy('j.waktu_mulai')
                 ->limit(100)
                 ->get();
+
+            $stats = [
+                'scheduled_today' => DB::table('janji_temu')
+                    ->where('dokter_id', $doctor->id)
+                    ->whereDate('tanggal_janji', today())
+                    ->where('status', 'terjadwal')
+                    ->count(),
+                'scheduled_total' => DB::table('janji_temu')
+                    ->where('dokter_id', $doctor->id)
+                    ->where('status', 'terjadwal')
+                    ->count(),
+                'completed' => DB::table('janji_temu')
+                    ->where('dokter_id', $doctor->id)
+                    ->where('status', 'selesai')
+                    ->count(),
+            ];
         }
 
         return view('dashboard.dokter', [
             'user' => $request->user(),
+            'pageTitle' => 'Dashboard Dokter',
+            'activePage' => 'dashboard',
             'doctor' => $doctor,
             'appointments' => $appointments,
+            'stats' => $stats,
         ]);
     }
 
@@ -257,18 +284,84 @@ class DashboardController extends Controller
 
     private function doctorSchedules(): Collection
     {
-        return DB::table('jadwal_dokter as j')
+        $schedules = DB::table('jadwal_dokter as j')
             ->join('dokter as d', 'd.id', '=', 'j.dokter_id')
             ->join('spesialis as s', 's.id', '=', 'd.spesialis_id')
             ->where('d.aktif', true)
-            ->orderBy('j.hari_dalam_minggu')
+            ->orderBy('d.nama_lengkap')
             ->orderBy('j.waktu_mulai')
+            ->orderBy('j.hari_dalam_minggu')
             ->get([
+                'd.id as dokter_id',
                 'j.hari_dalam_minggu',
                 'j.waktu_mulai',
                 'j.waktu_selesai',
                 'd.nama_lengkap as nama_dokter',
                 's.nama as nama_spesialis',
             ]);
+
+        return $schedules
+            ->groupBy('dokter_id')
+            ->map(function (Collection $doctorSchedules): object {
+                $doctor = $doctorSchedules->first();
+                $schedulesByTime = $doctorSchedules
+                    ->groupBy(fn (object $schedule): string => $schedule->waktu_mulai.'|'.$schedule->waktu_selesai)
+                    ->map(function (Collection $sameTimeSchedules): object {
+                        $schedule = $sameTimeSchedules->first();
+
+                        return (object) [
+                            'hari' => $this->dayRanges($sameTimeSchedules->pluck('hari_dalam_minggu')),
+                            'waktu_mulai' => $schedule->waktu_mulai,
+                            'waktu_selesai' => $schedule->waktu_selesai,
+                        ];
+                    })
+                    ->values();
+
+                return (object) [
+                    'nama_dokter' => $doctor->nama_dokter,
+                    'nama_spesialis' => $doctor->nama_spesialis,
+                    'schedules' => $schedulesByTime,
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, int|string>  $weekdayNumbers
+     * @return list<string>
+     */
+    private function dayRanges(Collection $weekdayNumbers): array
+    {
+        $dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        $days = $weekdayNumbers
+            ->map(fn (int|string $weekday): int => (int) $weekday)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        if (count($days) === 7) {
+            return ['Setiap hari'];
+        }
+
+        $dayLookup = array_fill_keys($days, true);
+        $rangeStarts = array_filter(
+            $days,
+            fn (int $day): bool => ! isset($dayLookup[($day + 6) % 7]),
+        );
+        $ranges = [];
+
+        foreach ($rangeStarts as $startDay) {
+            $endDay = $startDay;
+            while (isset($dayLookup[($endDay + 1) % 7])) {
+                $endDay = ($endDay + 1) % 7;
+            }
+
+            $ranges[] = $startDay === $endDay
+                ? $dayNames[$startDay]
+                : $dayNames[$startDay].'–'.$dayNames[$endDay];
+        }
+
+        return $ranges;
     }
 }

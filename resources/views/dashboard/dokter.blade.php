@@ -1,66 +1,69 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard Dokter &bull; SIKITA</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body>
-    <main class="dashboard-shell">
-        <header class="dashboard-header">
-            <div class="dashboard-brand">
-                <div class="dashboard-brand-mark">S</div>
-                <div>
-                    <h1>SIKITA</h1>
-                    <p>Panel Dokter Praktik</p>
-                </div>
-            </div>
-            <div class="dashboard-header-actions">
-                <span class="muted">dr. {{ $user->name }}</span>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="sikita-btn-outline" type="submit">Keluar</button>
-                </form>
-            </div>
-        </header>
+@extends('dashboard.dokter.layout')
 
-        @if (session('sukses'))
-            <div class="dashboard-alert" role="status">{{ session('sukses') }}</div>
-        @endif
+@section('content')
+    <section class="patient-welcome-banner doctor-welcome-banner">
+        <div>
+            <h2>Selamat Datang, dr. {{ $user->name }}!</h2>
+            <p>Pantau agenda pasien dan catatan pemeriksaan Anda dari satu tempat.</p>
+        </div>
+        <div class="patient-welcome-symbol" aria-hidden="true">
+            <svg viewBox="0 0 120 120"><path d="M60 12v96M12 60h96"/><circle cx="60" cy="60" r="43"/></svg>
+        </div>
+    </section>
 
-        <section class="sikita-card dashboard-card">
-            <div class="section-heading">
+    @if ($doctor === null)
+        <section class="patient-section-card patient-page-card">
+            <h2 class="doctor-card-title">Profil dokter belum tersedia</h2>
+            <p class="muted">Akun ini belum terhubung dengan data dokter. Hubungi administrator klinik.</p>
+        </section>
+    @else
+        <section class="doctor-overview-grid" aria-label="Ringkasan dokter">
+            <article class="patient-overview-card doctor-metric-card">
+                <span class="patient-card-eyebrow">Agenda hari ini</span>
+                <strong>{{ $stats['scheduled_today'] }}</strong>
+                <span class="muted">janji temu</span>
+            </article>
+            <article class="patient-overview-card doctor-metric-card">
+                <span class="patient-card-eyebrow">Pasien menunggu</span>
+                <strong>{{ $stats['scheduled_total'] }}</strong>
+                <span class="muted">janji aktif</span>
+            </article>
+            <article class="patient-overview-card doctor-metric-card">
+                <span class="patient-card-eyebrow">Pemeriksaan selesai</span>
+                <strong>{{ $stats['completed'] }}</strong>
+                <span class="muted">kunjungan</span>
+            </article>
+        </section>
+
+        <section class="patient-section-card patient-page-card">
+            <div class="patient-section-heading">
                 <div>
-                    <h2>Pendaftaran pasien</h2>
-                    <p class="muted">Janji temu untuk dokter yang sedang masuk.</p>
+                    <span class="patient-card-eyebrow">Agenda klinik</span>
+                    <h2>Janji Temu Pasien</h2>
                 </div>
-                <span class="dashboard-badge">{{ $appointments->count() }} kunjungan</span>
+                <a class="patient-text-link" href="{{ route('dokter.pasien.index') }}">Lihat daftar pasien</a>
             </div>
-            @if ($doctor === null)
-                <p class="dashboard-empty">Akun ini belum terhubung dengan data dokter. Hubungi administrator klinik.</p>
-            @elseif ($appointments->isEmpty())
+            @if ($appointments->isEmpty())
                 <p class="dashboard-empty">Belum ada janji temu pasien.</p>
             @else
                 <div class="dashboard-table-wrap">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table patient-history-table">
                         <thead>
-                            <tr><th>Tanggal &amp; waktu</th><th>Antrean</th><th>Pasien</th><th>Keluhan</th><th>Status</th><th></th></tr>
+                            <tr><th>Tanggal &amp; waktu</th><th>Antrean</th><th>Pasien</th><th>Keluhan</th><th>Status</th><th>Tindakan</th></tr>
                         </thead>
                         <tbody>
                             @foreach ($appointments as $appointment)
                                 <tr>
-                                    <td>{{ \Illuminate\Support\Carbon::parse($appointment->tanggal_janji)->format('d M Y') }}<br>{{ substr($appointment->waktu_mulai, 0, 5) }}</td>
+                                    <td>{{ \Illuminate\Support\Carbon::parse($appointment->tanggal_janji)->format('d M Y') }}<br><span class="muted">{{ substr($appointment->waktu_mulai, 0, 5) }}</span></td>
                                     <td>{{ $appointment->nomor_janji }}<br><span class="muted">No. {{ $appointment->nomor_antrean }}</span></td>
-                                    <td>{{ $appointment->nama_pasien }}<br><span class="muted">{{ $appointment->nomor_pasien }}</span></td>
+                                    <td><strong>{{ $appointment->nama_pasien }}</strong><br><span class="muted">{{ $appointment->nomor_pasien }}</span></td>
                                     <td>{{ $appointment->keluhan_utama ?: '—' }}</td>
                                     <td><span class="dashboard-badge dashboard-badge--{{ $appointment->status }}">{{ ['terjadwal' => 'Terjadwal', 'selesai' => 'Selesai', 'dibatalkan' => 'Dibatalkan'][$appointment->status] ?? $appointment->status }}</span></td>
                                     <td>
-                                        @if ($appointment->status === 'terjadwal')
-                                            <form method="POST" action="{{ route('dokter.janji-temu.complete', $appointment->id) }}">
-                                                @csrf
-                                                <button class="sikita-btn-outline" type="submit">Tandai selesai</button>
-                                            </form>
+                                        @if ($appointment->status === 'terjadwal' && $appointment->rekam_medis_id === null)
+                                            <a class="patient-button patient-button--primary" href="{{ route('dokter.pemeriksaan.create', $appointment->id) }}">Isi pemeriksaan</a>
+                                        @elseif ($appointment->rekam_medis_id !== null)
+                                            <a class="patient-button patient-button--light" href="{{ route('dokter.pasien.history', $appointment->pasien_id) }}">Riwayat pasien</a>
                                         @endif
                                     </td>
                                 </tr>
@@ -70,6 +73,5 @@
                 </div>
             @endif
         </section>
-    </main>
-</body>
-</html>
+    @endif
+@endsection

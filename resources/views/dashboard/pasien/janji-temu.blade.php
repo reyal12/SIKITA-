@@ -56,14 +56,32 @@
                     <div class="dashboard-table-wrap">
                         <table class="dashboard-table">
                             <thead>
-                                <tr><th>Hari</th><th>Dokter &amp; spesialis</th><th>Jam</th></tr>
+                                <tr><th>Dokter &amp; spesialis</th><th>Hari </th><th>jam praktik</th></tr>
                             </thead>
                             <tbody>
-                                @foreach ($doctorSchedules as $schedule)
+                                @foreach ($doctorSchedules as $doctor)
                                     <tr>
-                                        <td>{{ ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][$schedule->hari_dalam_minggu] ?? '—' }}</td>
-                                        <td>{{ $schedule->nama_dokter }}<br><span class="muted">{{ $schedule->nama_spesialis }}</span></td>
-                                        <td>{{ substr($schedule->waktu_mulai, 0, 5) }}–{{ substr($schedule->waktu_selesai, 0, 5) }}</td>
+                                        <td>{{ $doctor->nama_dokter }}<br><span class="muted">{{ $doctor->nama_spesialis }}</span></td>
+                                        <td>
+                                            <ul class="patient-doctor-schedule-list">
+                                                @foreach ($doctor->schedules as $schedule)
+                                                    <li>
+                                                        <strong>{{ implode(', ', $schedule->hari) }}</strong>
+
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </td>
+                                        <td>
+                                            <ul class="patient-doctor-schedule-list">
+                                                @foreach ($doctor->schedules as $schedule)
+                                                    <li>
+                                                       
+                                                        <span>{{ substr($schedule->waktu_mulai, 0, 5) }}–{{ substr($schedule->waktu_selesai, 0, 5) }}</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>

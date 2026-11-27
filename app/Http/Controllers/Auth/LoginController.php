@@ -18,7 +18,12 @@ class LoginController extends Controller
      */
     public function showLoginForm(): View
     {
-        return view('auth.login');
+        return view('auth.login', ['doctorLogin' => false]);
+    }
+
+    public function showDoctorLoginForm(): View
+    {
+        return view('auth.login', ['doctorLogin' => true]);
     }
 
     /**
@@ -53,6 +58,28 @@ class LoginController extends Controller
         return redirect()->intended(route($user->dashboardRoute()));
     }
 
+    public function loginDoctor(LoginRequest $request): RedirectResponse
+    {
+        $request->authenticate();
+
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->punyaPeran('dokter')) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()
+                ->withErrors(['email' => 'Akun ini tidak terdaftar sebagai dokter.'])
+                ->onlyInput('email');
+        }
+
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('dokter.dashboard'));
+    }
+
     /**
      * Tangani permintaan keluar (logout) pengguna.
      * Hanya dapat diakses melalui metode HTTP POST dengan proteksi CSRF.
@@ -65,6 +92,6 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('sukses', 'Anda telah berhasil keluar.');
+        return redirect()->route('landing')->with('sukses', 'Anda telah berhasil keluar.');
     }
 }
