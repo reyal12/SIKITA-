@@ -1,5 +1,12 @@
 <?php
 
+use App\Http\Controllers\AdminAccountController;
+use App\Http\Controllers\AdminDoctorController;
+use App\Http\Controllers\AdminMedicineController;
+use App\Http\Controllers\AdminPatientManagementController;
+use App\Http\Controllers\AdminRegistrationMonitoringController;
+use App\Http\Controllers\AdminServiceMonitoringController;
+use App\Http\Controllers\AdminSpecialtyController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -32,12 +39,68 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
-Route::middleware(['auth', 'peran:admin'])->group(function () {
-    Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
-    Route::post('/admin/pembayaran', [PaymentController::class, 'store'])->name('admin.pembayaran.store');
-    Route::patch('/admin/pembayaran/{payment}', [PaymentController::class, 'updateStatus'])
-        ->name('admin.pembayaran.status');
-});
+// Semua halaman dan aksi administrasi wajib login dan memiliki peran admin.
+Route::middleware(['auth', 'peran:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function (): void {
+        Route::get('dashboard', [DashboardController::class, 'admin'])->name('dashboard');
+        Route::post('pembayaran', [PaymentController::class, 'store'])->name('pembayaran.store');
+        Route::patch('pembayaran/{payment}', [PaymentController::class, 'updateStatus'])
+            ->name('pembayaran.status');
+
+        Route::resource('pasien', AdminPatientManagementController::class)
+            ->parameters(['pasien' => 'patient'])
+            ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+
+        Route::resource('dokter', AdminDoctorController::class)
+            ->parameters(['dokter' => 'doctor'])
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+        Route::patch('dokter/{doctor}/nonaktifkan', [AdminDoctorController::class, 'deactivate'])
+            ->whereNumber('doctor')
+            ->name('dokter.deactivate');
+        Route::post('dokter/spesialisasi', [AdminSpecialtyController::class, 'store'])
+            ->name('dokter.spesialisasi.store');
+        Route::put('dokter/spesialisasi/{specialty}', [AdminSpecialtyController::class, 'update'])
+            ->whereNumber('specialty')
+            ->name('dokter.spesialisasi.update');
+        Route::delete('dokter/spesialisasi/{specialty}', [AdminSpecialtyController::class, 'destroy'])
+            ->whereNumber('specialty')
+            ->name('dokter.spesialisasi.destroy');
+
+        Route::get('jadwal-dokter', [AdminDoctorController::class, 'schedules'])
+            ->name('jadwal-dokter.index');
+        Route::post('jadwal-dokter', [AdminDoctorController::class, 'storeSchedule'])
+            ->name('jadwal-dokter.store');
+        Route::put('jadwal-dokter/{schedule}', [AdminDoctorController::class, 'updateSchedule'])
+            ->whereNumber('schedule')
+            ->name('jadwal-dokter.update');
+        Route::delete('jadwal-dokter/{schedule}', [AdminDoctorController::class, 'destroySchedule'])
+            ->whereNumber('schedule')
+            ->name('jadwal-dokter.destroy');
+
+        Route::resource('obat', AdminMedicineController::class)->only(['index']);
+
+        Route::resource('akun', AdminAccountController::class)->only(['index', 'create', 'store']);
+        Route::put('akun/{account}/password', [AdminAccountController::class, 'resetPassword'])
+            ->whereNumber('account')
+            ->name('akun.password.update');
+
+        Route::resource('pemantauan/pendaftaran', AdminRegistrationMonitoringController::class)
+            ->parameters(['pendaftaran' => 'appointment'])
+            ->only(['index', 'show'])
+            ->names([
+                'index' => 'pemantauan.pendaftaran.index',
+                'show' => 'pemantauan.pendaftaran.show',
+            ]);
+        Route::resource('pemantauan/pelayanan', AdminServiceMonitoringController::class)
+            ->parameters(['pelayanan' => 'record'])
+            ->only(['index', 'show'])
+            ->names([
+                'index' => 'pemantauan.pelayanan.index',
+                'show' => 'pemantauan.pelayanan.show',
+            ]);
+    });
 
 Route::middleware(['auth', 'peran:dokter,admin'])->group(function () {
     Route::get('/dokter/dashboard', [DashboardController::class, 'dokter'])->name('dokter.dashboard');
